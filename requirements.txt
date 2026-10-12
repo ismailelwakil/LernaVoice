@@ -1,0 +1,20 @@
+# --- service ---
+fastapi>=0.115,<1
+uvicorn[standard]>=0.30,<1
+pydantic>=2.7,<3
+pydantic-settings>=2.2,<3
+python-dotenv>=1.0,<2
+websockets>=13,<16
+httpx>=0.27,<1
+
+# --- providers ---
+google-genai>=1.0,<2
+
+# --- persistence (MongoDB is LERNA's store) ---
+motor>=3.5,<4
+pymongo>=4.8,<5
+
+# --- test / dev client ---
+pytest>=8,<10
+pytest-asyncio>=0.23,<2
+streamlit>=1.36,<2

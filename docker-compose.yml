@@ -1,0 +1,33 @@
+# LERNA Voice AI Service — one-command production deploy.
+#   cp .env.example .env   # fill in the keys you have
+#   docker compose up --build -d
+#
+# Voice sessions are stateful and live in-process, so this runs ONE worker.
+# Scale horizontally behind a sticky-session load balancer, never with --workers.
+services:
+  voice-ai:
+    build: .
+    image: lerna-voice-ai:latest
+    container_name: lerna-voice-ai
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # Anything set here overrides .env. Pin these before exposing publicly.
+      APP_ENV: production
+      PORT: "8080"
+      VOICE_AUTH_REQUIRED: "true"
+      EXPOSE_DEV_DIAGNOSTICS: "false"
+      # One worker only — see the note above.
+      WEB_CONCURRENCY: "1"
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    # Uncomment to mount a Vertex service-account key read-only:
+    # volumes:
+    #   - ./secrets/sa.json:/secrets/sa.json:ro

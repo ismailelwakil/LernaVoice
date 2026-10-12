@@ -1,0 +1,1105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>LERNA Voice</title>
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;background:#000;color:#fff;overflow:hidden;
+    font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  #stage{position:relative;height:100vh;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:20px}
+
+  /* ---------------- top chips ---------------- */
+  .top{position:absolute;top:12px;left:0;right:0;display:flex;justify-content:space-between;
+    padding:0 14px;pointer-events:none;gap:8px;flex-wrap:wrap}
+  .chips{display:flex;gap:6px;pointer-events:auto;flex-wrap:wrap;align-items:flex-start}
+  .chip{font:11px ui-monospace,Menlo,monospace;color:#9aa7bd;background:#12161f;
+    border:1px solid #222b3c;border-radius:999px;padding:4px 10px;cursor:default;
+    white-space:nowrap;line-height:1.5}
+  .chip.btn{cursor:pointer}.chip.btn:hover{border-color:#4f8cff;color:#cfe0ff}
+  .chip b{color:#e8eefb;font-weight:600}
+  .chip.warn{border-color:#8a6d1f;color:#ffd88a;background:#1d1a10}
+  .chip.live{border-color:#2b6b3a;color:#8ff0ac;background:#0f1a12}
+  .dot{width:7px;height:7px;border-radius:50%;background:#f85149;display:inline-block;
+    margin-right:5px;vertical-align:1px}
+  .dot.on{background:#3fb950}
+
+  /* ---------------- orb ---------------- */
+  #orbwrap{position:relative;width:min(260px,60vw);height:min(260px,60vw);
+    display:grid;place-items:center}
+  #glow{position:absolute;inset:0;border-radius:50%;
+    background:radial-gradient(circle at 50% 55%, rgba(80,140,255,.45), rgba(80,140,255,0) 62%);
+    filter:blur(18px);opacity:.85;transition:opacity .4s}
+  #orb{width:45%;height:45%;border-radius:50%;position:relative;
+    background:
+      radial-gradient(circle at 38% 26%, #eaf2ff 0%, #a9c8ff 16%, #4f86f7 44%, #2f63e0 68%, #1b3fae 100%);
+    box-shadow:0 0 42px 10px rgba(79,134,247,.42), inset -10px -16px 28px rgba(10,25,70,.55),
+               inset 8px 12px 22px rgba(255,255,255,.35);
+    animation:breathe 4.2s ease-in-out infinite;transition:transform .18s ease-out}
+  #orb::after{content:"";position:absolute;left:14%;right:14%;bottom:4%;height:44%;
+    border-radius:50%;background:radial-gradient(ellipse at 50% 85%,
+      rgba(255,255,255,.92), rgba(255,255,255,.35) 45%, rgba(255,255,255,0) 72%);
+    filter:blur(2px)}
+  @keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.045)}}
+  @keyframes think{0%,100%{transform:scale(.97)}50%{transform:scale(1.06)}}
+  body.speaking #orb{animation:breathe 1.5s ease-in-out infinite}
+  body.thinking #orb{animation:think 1.0s ease-in-out infinite}
+  body.listening #glow{opacity:1}
+  body.mic #glow{opacity:1;
+    background:radial-gradient(circle at 50% 55%, rgba(63,185,80,.42), rgba(63,185,80,0) 62%)}
+  body.idle #glow{opacity:.5}
+  #ring{position:absolute;width:65%;height:65%;border-radius:50%;
+    border:1px solid rgba(120,170,255,.22)}
+  body.speaking #ring{animation:pulse 1.5s ease-out infinite}
+  body.mic #ring{border-color:rgba(90,220,130,.35);animation:pulse 2.2s ease-out infinite}
+  @keyframes pulse{0%{transform:scale(.92);opacity:.7}100%{transform:scale(1.35);opacity:0}}
+
+  #status{color:#8b98ab;font-size:13px;letter-spacing:.02em;min-height:20px;text-align:center;
+    padding:0 16px}
+  #status b{color:#dce6f7;font-weight:500}
+  #meter{height:3px;width:180px;background:#151a24;border-radius:3px;overflow:hidden;opacity:0;
+    transition:opacity .3s}
+  #meter.on{opacity:1}
+  #meter i{display:block;height:100%;width:0;background:#2f6bff;transition:width .08s linear}
+
+  /* error banner: the one thing that must never be silent */
+  #banner{display:none;max-width:min(620px,90%);background:#2a1414;border:1px solid #6b2b2b;
+    color:#ffc9c9;border-radius:10px;padding:9px 13px;font-size:12.5px;line-height:1.5}
+  #banner.show{display:block}
+  #banner b{color:#ff9f9f}
+  #banner code{font:11.5px ui-monospace,monospace;color:#ffd7d7}
+
+  /* ---------------- caption ---------------- */
+  #caption{max-width:620px;width:88%;max-height:110px;overflow:auto;text-align:center;
+    color:#cdd8ea;font-size:15px;line-height:1.55;padding:0 10px}
+  #caption .you{color:#7fa8ff}
+
+  /* ---------------- bottom bar ---------------- */
+  #bar{position:absolute;bottom:22px;width:min(660px,94%);background:#16181d;
+    border:1px solid #23272f;border-radius:999px;display:flex;align-items:center;
+    gap:6px;padding:8px 8px 8px 14px}
+  #bar input{flex:1;min-width:30px;background:transparent;border:0;outline:0;color:#fff;font-size:15px}
+  #bar input::placeholder{color:#6b7484}
+  .rbtn{width:42px;height:42px;border-radius:50%;border:0;cursor:pointer;display:grid;
+    place-items:center;font-size:17px;color:#fff;background:#2a2f39;flex:0 0 auto}
+  .rbtn:hover{filter:brightness(1.25)}
+  .rbtn.blue{background:#2f6bff}.rbtn.red{background:#d13b36}
+  .rbtn.on{background:#1f8f45;box-shadow:0 0 0 3px rgba(31,143,69,.25)}
+  .rbtn.sm{width:36px;height:36px;font-size:15px;background:transparent;color:#9aa7bd}
+  .rbtn.sm:hover{background:#20242c;color:#fff}
+  /* §8 — the labelled "Ask a question" button: stop the tutor, open the mic. */
+  .askbtn{display:flex;align-items:center;gap:6px;height:42px;padding:0 15px;border-radius:999px;
+    border:0;cursor:pointer;background:#2f6bff;color:#fff;font-size:14px;font-weight:600;
+    flex:0 0 auto;white-space:nowrap}
+  .askbtn:hover{filter:brightness(1.12)}
+  .askbtn:active{transform:translateY(1px)}
+  .askbtn .h{font-size:16px;line-height:1}
+  .askbtn.live{background:#1f8f45;box-shadow:0 0 0 3px rgba(31,143,69,.28)}
+
+  /* ---------------- drawers ---------------- */
+  #dev,#session{position:absolute;top:0;right:0;width:390px;max-width:94vw;height:100%;
+    background:#0b0e14;border-left:1px solid #1d2230;transform:translateX(100%);
+    transition:transform .25s ease;display:flex;flex-direction:column;z-index:20}
+  #dev.open,#session.open{transform:translateX(0)}
+  #dev h3,#session h3{margin:0;padding:14px 16px;font-size:12px;letter-spacing:.09em;color:#8b98ab;
+    text-transform:uppercase;border-bottom:1px solid #1d2230;display:flex;
+    justify-content:space-between;align-items:center}
+  #dev h3 span,#session h3 span{cursor:pointer;color:#5c6775}
+  .kv{display:flex;justify-content:space-between;gap:10px;padding:7px 16px;
+    border-bottom:1px solid #141922;font-size:12.5px}
+  .kv i{color:#7b8698;font-style:normal}
+  .kv b{font:12px ui-monospace,Menlo,monospace;font-weight:500;text-align:right;
+    word-break:break-all;color:#dbe4f2}
+  .kv b.hl{color:#6fa8ff}
+  .sect{padding:9px 16px 3px;font:10px ui-monospace,monospace;letter-spacing:.1em;
+    color:#4d5866;text-transform:uppercase}
+  #evt{flex:1;overflow:auto;padding:8px 12px;font:11px/1.5 ui-monospace,Menlo,monospace;
+    min-height:110px}
+  #evt div{padding:1px 0;white-space:pre-wrap;word-break:break-word;color:#5f6b7d}
+  .p{color:#a371f7}.a{color:#58a6ff}.l{color:#3fb950}.e{color:#f85149}.s{color:#e3b341}
+  #devbtns{display:flex;gap:6px;padding:10px 12px;border-top:1px solid #1d2230;flex-wrap:wrap}
+  #devbtns button{flex:1 1 44%;background:#141924;border:1px solid #222b3c;color:#c7d2e3;
+    border-radius:6px;padding:6px;font-size:11.5px;cursor:pointer}
+  #devbtns button:hover{border-color:#4f8cff}
+  .vol{display:flex;align-items:center;gap:8px;padding:8px 16px}
+  .vol input[type=range]{flex:1;accent-color:#2f6bff}
+  .field{display:flex;flex-direction:column;gap:4px;padding:8px 16px}
+  .field label{font-size:11px;color:#7b8698;text-transform:uppercase;letter-spacing:.06em}
+  .field input,.field select{background:#141924;border:1px solid #222b3c;border-radius:7px;
+    color:#e6edf3;padding:7px 9px;font-size:13px;outline:0}
+  .field input:focus,.field select:focus{border-color:#4f8cff}
+  .check{display:flex;align-items:center;gap:8px;padding:10px 16px;font-size:13px;color:#c7d2e3}
+  .hint{padding:6px 16px 12px;font-size:11.5px;color:#5f6b7d;line-height:1.5}
+  #go{margin:8px 16px 14px;background:#2f6bff;border:0;color:#fff;border-radius:9px;
+    padding:10px;font-size:13.5px;cursor:pointer}
+  #go:hover{filter:brightness(1.1)}
+  .toast{position:absolute;bottom:86px;background:#1b2130;border:1px solid #2a3344;
+    color:#cfd9e8;padding:8px 14px;border-radius:9px;font-size:12.5px;opacity:0;
+    transition:opacity .3s;pointer-events:none;max-width:80%;text-align:center;z-index:30}
+  .toast.show{opacity:1}
+</style>
+</head>
+<body class="idle">
+<div id="stage">
+  <div class="top">
+    <div class="chips">
+      <span class="chip"><span class="dot" id="dot"></span><span id="conn">disconnected</span></span>
+      <span class="chip" id="pipechip">pipeline: —</span>
+      <span class="chip" id="langchip">—</span>
+      <span class="chip btn warn" id="soundchip" title="Play a test tone to check browser audio">🔇 sound off — tap</span>
+      <span class="chip btn live" id="voicechip" title="Assistant voice. Click to cycle: browser voice → service PCM → both">🗣 browser voice</span>
+    </div>
+    <div class="chips">
+      <span class="chip btn" id="topicsLink" title="Browse topics the tutor can teach">📚 topics</span>
+      <span class="chip btn" id="toggleSession" title="Session settings">⚙ session</span>
+      <span class="chip btn" id="toggleDev" title="Developer diagnostics">⌄ dev</span>
+    </div>
+  </div>
+
+  <div id="orbwrap"><div id="glow"></div><div id="ring"></div><div id="orb"></div></div>
+  <div id="status">Tap the blue <b>●</b> to start a voice lesson</div>
+  <div id="meter"><i id="meterbar"></i></div>
+  <div id="banner"></div>
+  <div id="caption"></div>
+
+  <div id="bar">
+    <button class="rbtn sm" id="plus" title="Send 0.5 s of synthetic audio">+</button>
+    <input id="msg" placeholder="Type a question" />
+    <button class="askbtn" id="ask" title="Ask a question — stops the tutor and opens the microphone" aria-label="Ask a question"><span class="h">🙋</span><span>Ask</span></button>
+    <button class="rbtn" id="mic" title="Turn the microphone on/off">🎤</button>
+    <button class="rbtn blue" id="main" title="Connect">●</button>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <!-- session settings (this page is standalone; it is not the product frontend) -->
+  <div id="session">
+    <h3>Session <span id="closeSession">✕</span></h3>
+    <div class="field"><label for="s-student">Student ID</label><input id="s-student" /></div>
+    <div class="field"><label for="s-course">Course ID</label><input id="s-course" /></div>
+    <div class="field"><label for="s-lesson">Lesson ID</label><input id="s-lesson" /></div>
+    <div class="field"><label for="s-course-sel">Course</label><select id="s-course-sel"></select></div>
+    <div class="field"><label for="s-topic-sel">Topic</label><select id="s-topic-sel"></select></div>
+    <div class="field"><label for="s-topic">…or type your own topic</label><input id="s-topic" placeholder="e.g. Dijkstra's algorithm" /></div>
+    <div class="field"><label for="s-lang">Language</label><select id="s-lang"></select></div>
+    <label class="check"><input type="checkbox" id="s-returning" /> Returning student (recap)</label>
+    <button id="go">Connect with these settings</button>
+    <div class="hint"><b>Arabic is taught in Modern Standard Arabic (fusHa)</b> — voice
+      <code>ar-SA-ZariyahNeural</code> with formal lines and a lecture-style instruction. The
+      language code stays <code>ar</code>, so routing, checkpoints and the English concept
+      store are untouched.<br />
+      Language switches the live lesson straight away — the tutor acknowledges
+      in the new language and keeps the current step (no reconnect, no restart). The 10 mandatory
+      languages route through different pipelines: pick <b>Igbo</b> to watch the composed cascade
+      (<code>elevenlabs + gemini + gemini</code>) instead of native Gemini Live.</div>
+  </div>
+
+  <!-- developer diagnostics (§41) -->
+  <div id="dev">
+    <h3>Developer diagnostics <span id="closeDev">✕</span></h3>
+    <div class="kv"><i>Active pipeline</i><b class="hl" id="d-pipe">—</b></div>
+    <div class="kv"><i>Session state</i><b id="d-state">—</b></div>
+    <div class="kv"><i>Language</i><b id="d-lang">—</b></div>
+    <div class="kv"><i>Level</i><b id="d-level">—</b></div>
+    <div class="kv"><i>Teaching order</i><b id="d-moves">—</b></div>
+    <div class="kv"><i>Sources</i><b id="d-src">—</b></div>
+    <div class="kv"><i>Fallback reason</i><b id="d-reason">none</b></div>
+    <div class="kv"><i>Retry count</i><b id="d-retry">0</b></div>
+    <div class="kv"><i>Failovers</i><b id="d-fail">0</b></div>
+    <div class="kv"><i>Interrupts / resumes</i><b id="d-cyc">0 / 0</b></div>
+    <div class="kv"><i>Latency</i><b id="d-lat">—</b></div>
+    <div class="kv"><i>Checkpoint</i><b id="d-cp">none</b></div>
+    <div class="kv"><i>Lesson plan</i><b id="d-plan">—</b></div>
+    <div class="kv"><i>Concepts covered</i><b id="d-con">—</b></div>
+    <div class="kv"><i>Open questions</i><b id="d-q">0</b></div>
+    <div class="sect">audio</div>
+    <div class="kv"><i>Assistant voice</i><b class="hl" id="d-voice">browser</b></div>
+    <div class="kv"><i>Voice engine</i><b id="d-tts">—</b></div>
+    <div class="kv"><i>Voices installed</i><b id="d-nvoices">—</b></div>
+    <div class="kv"><i>Sentences spoken</i><b id="d-spoken">0</b></div>
+    <div class="vol"><i style="color:#7b8698;font-style:normal;font-size:12.5px">Pick voice</i>
+      <select id="voicesel" style="flex:1;background:#141924;border:1px solid #222b3c;color:#dbe4f2;border-radius:6px;padding:4px;font-size:11.5px"></select></div>
+    <div id="ttsnote" style="display:none;margin-top:6px;font-size:11px;line-height:1.45;color:#f0c674"></div>
+    <div class="kv"><i>Audio context</i><b id="d-actx">—</b></div>
+    <div class="kv"><i>Received</i><b id="d-aud">0 B</b></div>
+    <div class="kv"><i>Chunks in / out</i><b id="d-chunks">0 / 0</b></div>
+    <div class="kv"><i>Microphone</i><b id="d-mic">off</b></div>
+    <div class="vol"><i style="color:#7b8698;font-style:normal;font-size:12.5px">Volume</i>
+      <input id="vol" type="range" min="0" max="100" value="90" />
+      <b id="d-vol" style="font:12px ui-monospace,monospace;color:#dbe4f2">90%</b></div>
+    <div id="evt"></div>
+    <div id="devbtns">
+      <button id="b-state">Refresh state</button>
+      <button id="b-prov">Provider health</button>
+      <button id="b-langs">Language matrix</button>
+      <button id="b-test">Test sound</button>
+      <button id="b-voice">Test voice</button>
+      <button id="b-replay">Replay last reply</button>
+      <button id="b-resume">Resume lesson</button>
+      <button id="b-end">End session</button>
+    </div>
+  </div>
+</div>
+
+<script id="cfg" type="application/json">/*__CONFIG_JSON__*/{
+  "serviceUrl": "",
+  "servicePort": "3000",
+  "apiKey": "",
+  "student_id": "demo-student-001",
+  "course_id": "algorithms-101",
+  "lesson_id": "lesson-binary-search",
+  "topic": "Binary Search",
+  "language": "en",
+  "resume_latest": false,
+  "languages": {"en":"English","ar":"العربية الفصحى · Arabic (fusHa)","ar-eg":"العربية المصرية · Egyptian (academic)","fr":"Français","sw":"Kiswahili",
+    "am":"አማርኛ · Amharic","ha":"Hausa","so":"Soomaali","yo":"Yorùbá","ig":"Igbo","zu":"isiZulu"}
+}</script>
+
+<script>
+const CFG = JSON.parse(document.getElementById('cfg').textContent);
+/* A UI language code may carry a register (`ar-MSA`, or an older `ar-EG`). The service wants
+   `language` + `dialect`; the browser voice picker only wants the base language. */
+function langBase(code){ return String(code || 'en').split('-')[0].toLowerCase(); }
+function langDialect(code){ const p = String(code || '').split('-'); return p.length > 1 ? p.join('-') : null; }
+const $ = (i)=>document.getElementById(i);
+
+/* Where is the voice service?
+   - served by the service itself (default): same origin, relative URLs
+   - embedded elsewhere (e.g. Streamlit on :8501): use the configured URL, or
+     the sibling port host when running behind a port-proxy like the sandbox. */
+function serviceBase(){
+  if(!CFG.serviceUrl) return '';
+  const h = location.hostname, head = h.split('-')[0];
+  if(h.indexOf('-') > 0 && !isNaN(parseInt(head, 10)))
+    return location.protocol + '//' + CFG.servicePort + '-' + h.split('-').slice(1).join('-');
+  return CFG.serviceUrl;
+}
+const BASE = serviceBase();
+/* Build the WebSocket origin from protocol + host, never from `location.origin`:
+   inside a sandboxed preview iframe (sandbox="allow-scripts") the document origin
+   is opaque and `location.origin` is the string "null", which produced a broken
+   `new WebSocket("null/…")`. Protocol and host stay real there. */
+const HOST_ORIGIN = location.protocol + '//' + location.host;
+const WS_BASE = (BASE || HOST_ORIGIN).replace(/^http/, 'ws');
+const IS_EMBEDDED = (function(){ try { return window.self !== window.top; } catch(e){ return true; } })();
+const IS_OPAQUE = (function(){ try { return window.location.origin === 'null'; } catch(e){ return true; } })();
+
+/* A sandboxed preview iframe can refuse audio permissions and, with an opaque
+   origin, some browsers also refuse the socket — so always offer the top-level page. */
+function tabUrl(){ return location.protocol + '//' + location.host + location.pathname + location.search; }
+function embeddedHint(){
+  return IS_EMBEDDED
+    ? ' Running inside an embedded frame' + (IS_OPAQUE ? ' with an opaque origin' : '') +
+      ' — open <a href="'+tabUrl()+'" target="_blank" rel="noopener">this page in its own tab</a> ' +
+      'for the microphone and audio to work reliably.'
+    : '';
+}
+
+let sid=null, ws=null, partial='', pingTimer=null, connecting=false;
+
+/* ---- audio ---- */
+const SRC_RATE = 24000;        // what the service sends (output_sample_rate)
+const MIC_RATE = 16000;        // what the service wants on the wire
+let actx=null, gain=null, nextAt=0, live=[], muted=false, volume=0.9;
+let chunksIn=0, bytesIn=0, playedMs=0, chunksOut=0, bytesOut=0;
+let lastReply=[], curReply=null;
+let micStream=null, micCtx=null, micNode=null, micProc=null, micOn=false;
+
+function ensureAudio(){
+  if(!actx){
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if(!AC){ banner('This browser has no Web Audio API, so assistant audio cannot be played.'); return null; }
+    try{ actx = new AC({sampleRate: SRC_RATE}); }
+    catch(e){ actx = new AC(); }
+    gain = actx.createGain(); gain.gain.value = muted ? 0 : volume; gain.connect(actx.destination);
+  }
+  if(actx.state === 'suspended') actx.resume();
+  paintSound();
+  return actx;
+}
+function paintSound(){
+  const chip = $('soundchip');
+  const ok = actx && actx.state === 'running';
+  chip.textContent = (muted ? '🔇' : (ok ? '🔊' : '🔇')) +
+                     (muted ? ' muted' : (ok ? ' sound on' : ' sound off — tap'));
+  chip.className = 'chip btn ' + (ok && !muted ? 'live' : 'warn');
+  $('d-actx').textContent = actx ? (actx.state + ' · ' + actx.sampleRate + ' Hz') : 'not started';
+}
+
+/* Schedule one PCM16 chunk to play back-to-back after the previous one, so the
+   reply is audible while it is still streaming in. */
+function playPcm(int16){
+  const a = ensureAudio(); if(!a) return;
+  const n = int16.length, dstRate = a.sampleRate;
+  const outLen = Math.max(1, Math.round(n * dstRate / SRC_RATE));
+  const buf = a.createBuffer(1, outLen, dstRate);
+  const ch = buf.getChannelData(0);
+  for(let i=0;i<outLen;i++){
+    const pos = i * SRC_RATE / dstRate;
+    const i0 = Math.floor(pos), i1 = Math.min(n-1, i0+1), f = pos - i0;
+    ch[i] = ((int16[i0]||0) * (1-f) + (int16[i1]||0) * f) / 32768;
+  }
+  const src = a.createBufferSource();
+  src.buffer = buf; src.connect(gain);
+  const startAt = Math.max(a.currentTime + 0.04, nextAt);
+  src.start(startAt);
+  nextAt = startAt + buf.duration;
+  live.push(src);
+  src.onended = ()=>{ const i = live.indexOf(src); if(i>=0) live.splice(i,1); };
+  playedMs += buf.duration * 1000;
+  setMode('speaking'); $('status').innerHTML='<b>speaking</b>';
+  clearTimeout(playPcm._t);
+  playPcm._t = setTimeout(onSpoke, Math.max(60, (nextAt - a.currentTime) * 1000 + 90));
+  paintAudio();
+}
+function onSpoke(){
+  if(!(ws && ws.readyState === 1)) return;
+  if(micOn){ setMode('mic'); $('status').innerHTML='<b>listening</b> — speak, then pause'; }
+  else { setMode('listening'); $('status').innerHTML='<b>listening</b>'; }
+}
+function stopPlayback(){
+  live.forEach(s=>{ try{ s.stop(); }catch(e){} });
+  live = []; nextAt = 0; clearTimeout(playPcm._t);
+}
+function beep(freq, ms, delay){
+  const a = ensureAudio(); if(!a) return;
+  const n = Math.round(a.sampleRate * ms / 1000);
+  const buf = a.createBuffer(1, n, a.sampleRate), ch = buf.getChannelData(0);
+  for(let i=0;i<n;i++){
+    const env = Math.min(1, i/(a.sampleRate*0.01)) * Math.min(1, (n-i)/(a.sampleRate*0.03));
+    ch[i] = Math.sin(2*Math.PI*freq*i/a.sampleRate) * env * 0.25;
+  }
+  const s = a.createBufferSource(); s.buffer = buf; s.connect(gain);
+  s.start(a.currentTime + (delay||0));
+}
+
+/* ---- assistant voice -------------------------------------------------------
+   The service streams real PCM16, and in production that *is* the voice. The
+   demo runs on mock vendors, whose audio is deliberately synthetic — audible,
+   but a buzz rather than speech. So the page can also voice the assistant's
+   transcript with the browser's own speech synthesiser: clear, instant, and
+   nothing to install. Every PCM byte the service sends is still counted in the
+   diagnostics, so switching to "service" compares the two paths directly.
+
+   modes:  browser = speak the transcript (default in the demo)
+           service = play the PCM the service sent
+           both    = do both
+   --------------------------------------------------------------------------- */
+const TTS_OK = typeof window !== 'undefined' && 'speechSynthesis' in window;
+let voiceMode = 'browser';
+let ttsVoices = [], ttsVoice = null, ttsQueue = '', spokenThisTurn = false, spokenCount = 0;
+let lastSpokenText = '';
+
+function pickVoice(lang){
+  if(!ttsVoices.length) return null;
+  const want = (lang || 'en').toLowerCase().replace('-msa', '');
+  const base = langBase(lang);
+  const exact = ttsVoices.filter(v => (v.lang || '').toLowerCase().startsWith(want));
+  const pool = exact.length ? exact
+             : ttsVoices.filter(v => (v.lang || '').toLowerCase().startsWith(base));
+  const list = pool.length ? pool
+             : ttsVoices.filter(v => (v.lang || '').toLowerCase().startsWith('en'));
+  const finalists = list.length ? list : ttsVoices.slice();
+  const score = (v)=>{
+    const n = (v.name || '').toLowerCase();
+    const l = (v.lang || '').toLowerCase();
+    let sc = 0;
+    if(/natural|neural|premium|enhanced|siri/.test(n)) sc += 8;   // best quality first
+    if(/google/.test(n)) sc += 5;
+    if(/samantha|ava|allison|serena|daniel|karen|moira|tessa|zira|aria|jenny|guy|joanna|matthew/.test(n)) sc += 3;
+    if(want === 'ar'){                                            // we teach fusHa
+      if(l === 'ar' || l === 'ar-sa') sc += 6;                    // …so the standard voice wins
+      else if(/^ar-eg/.test(l)) sc -= 2;                          // the dialect voice comes last
+      if(/maged|tarik|naayf|zariyah/.test(n)) sc += 2;            // …and its speakers first
+    }
+    if(v.localService) sc += 1;
+    if(/compact|espeak|festival|pico|robot/.test(n)) sc -= 5;     // last resort
+    return sc;
+  };
+  return finalists.sort((a, b) => score(b) - score(a))[0];
+}
+
+function loadTtsVoices(){
+  if(!TTS_OK) return;
+  const got = window.speechSynthesis.getVoices() || [];
+  if(!got.length) return;                     // Chrome loads them asynchronously
+  ttsVoices = got;
+  applyVoiceForLanguage();
+  const sel = $('voicesel');
+  sel.innerHTML = '';
+  ttsVoices.forEach(v=>{
+    const o = document.createElement('option');
+    o.value = v.voiceURI || v.name;
+    o.textContent = v.name + ' — ' + v.lang + (v.localService ? '' : ' (network)');
+    if(ttsVoice && o.value === (ttsVoice.voiceURI || ttsVoice.name)) o.selected = true;
+    sel.appendChild(o);
+  });
+  sel.onchange = ()=>{
+    ttsVoice = ttsVoices.find(v => (v.voiceURI || v.name) === sel.value) || ttsVoice;
+    paintVoice(); toast('voice → ' + (ttsVoice ? ttsVoice.name : 'default'));
+  };
+}
+
+/* Is there a voice on *this device* for this language? If not, the demo must
+   say so: an English voice reading Yoruba is the most robotic outcome of all. */
+function voiceAvailability(){
+  // `ar-MSA` has no browser voice of its own: judge it as plain Arabic.
+  const want = (CFG.language || 'en').toLowerCase().replace('-msa', '');
+  if(!TTS_OK) return { available:false, reason:'no speech synthesis in this browser' };
+  const match = ttsVoices.filter(v => (v.lang || '').toLowerCase().startsWith(want));
+  if(match.length) return { available:true, count:match.length };
+  return { available:false, reason:'no ' + (CFG.language || 'en').toUpperCase() + ' voice installed' };
+}
+
+function applyVoiceForLanguage(){
+  const want = (CFG.language || 'en').toLowerCase().replace('-msa', '');
+  const keep = ttsVoice && (ttsVoice.lang || '').toLowerCase().startsWith(want);
+  if(!keep) ttsVoice = pickVoice(CFG.language);
+  const avail = voiceAvailability();
+  $('d-tts').textContent = !TTS_OK ? 'not available in this browser'
+      : (ttsVoice ? ttsVoice.name + ' · ' + ttsVoice.lang + (avail.available ? '' : ' (not a ' + CFG.language + ' voice)')
+                  : 'system default');
+  $('d-nvoices').textContent = TTS_OK ? ttsVoices.length + ' installed' : '—';
+  const note = $('ttsnote');
+  if(note){
+    note.style.display = avail.available ? 'none' : '';
+    note.textContent = avail.available ? ''
+      : 'This device has ' + (avail.reason || 'no matching voice') + '. Install one (Windows: Settings → '
+        + 'Time & language → Speech; Android/iOS: system text-to-speech), or switch Voice mode to '
+        + '“service” to hear the voice the service generates.';
+  }
+}
+
+/* Speak whole sentences as soon as they are complete, so the reply starts
+   immediately instead of waiting for the end of the turn. */
+function speakText(text){
+  if(!TTS_OK || voiceMode === 'service' || !text) return;
+  ttsQueue += text;
+  const m = ttsQueue.match(/^[\s\S]*?[.!?…؟。]\s*/);
+  if(m){ ttsQueue = ttsQueue.slice(m[0].length); utter(m[0].trim()); }
+  else if(ttsQueue.length > 240){ const t = ttsQueue; ttsQueue = ''; utter(t.trim()); }
+}
+/* The transcript is written to be *read*; the synthesiser needs it written to be
+   *spoken*. "mid = (low + high) // 2" should not come out as punctuation names. */
+function speakable(text){
+  let out = (text || '');
+  const subs = [[' — ', ', '], [' – ', ', '], ['—', ', '], ['–', ', '],
+                ['//', ' divided by '], ['->', ' becomes '], ['=>', ' becomes '],
+                ['>=', ' greater than or equal to '], ['<=', ' less than or equal to '],
+                ['+', ' plus '], ['*', ' times '], ['=', ' equals '],
+                ['%', ' percent '], ['&', ' and '], ['_', ' '],
+                ['(', ''], [')', ''], ['[', ''], [']', ''], ['`', ''], ['"', '']];
+  for(const [a, b] of subs) out = out.split(a).join(b);
+  return out.replace(/\s+/g, ' ').replace(/\s+([,.])/g, '$1').trim();
+}
+function flushSpeech(){ if(ttsQueue.trim()){ const t = ttsQueue.trim(); ttsQueue = ''; utter(t); } }
+function utter(rawText){
+  if(!TTS_OK || !rawText) return;
+  const text = speakable(rawText);
+  if(!text) return;
+  lastSpokenText = text;
+  const u = new SpeechSynthesisUtterance(text);
+  if(ttsVoice) u.voice = ttsVoice;
+  u.lang = ttsVoice ? ttsVoice.lang : (CFG.language || 'en');
+  u.volume = muted ? 0 : volume;
+  u.rate = 0.97; u.pitch = 1.0;   // a tutor's pace, not an announcement's
+  u.onstart = ()=>{ spokenCount++; $('d-spoken').textContent = spokenCount;
+    setMode('speaking'); $('status').innerHTML = '<b>speaking</b>'; };
+  u.onend = ()=>{ if(!window.speechSynthesis.speaking) maybeIdle(); };
+  u.onerror = ()=>{};
+  try{ window.speechSynthesis.speak(u); }catch(e){ log('speech failed: '+e.message, 'e'); }
+}
+function stopSpeech(){
+  ttsQueue = ''; spokenThisTurn = false;
+  if(TTS_OK){ try{ window.speechSynthesis.cancel(); }catch(e){} }
+}
+function maybeIdle(){
+  if(live.length || (TTS_OK && window.speechSynthesis.speaking)) return;
+  onSpoke();
+}
+function setVoiceMode(m){
+  voiceMode = m;
+  if(m === 'service') stopSpeech();
+  if(m === 'browser') stopPlayback();
+  paintVoice();
+}
+function paintVoice(){
+  const label = { browser:'🗣 browser voice', service:'📡 service PCM', both:'🗣+📡 both' }[voiceMode];
+  const chip = $('voicechip');
+  chip.textContent = label;
+  chip.className = 'chip btn ' + (voiceMode === 'service' ? 'warn' : 'live');
+  chip.title = voiceMode === 'browser'
+    ? 'Speaking the transcript with a real browser voice. Click for service PCM.'
+    : voiceMode === 'service'
+      ? 'Playing the PCM the service sent (mock audio in demo mode). Click for browser voice.'
+      : 'Both engines. Click to go back to browser voice only.';
+  $('d-voice').textContent = voiceMode + (voiceMode === 'browser' ? ' (demo default)' : '');
+}
+
+function paintAudio(){
+  $('d-aud').textContent = bytesIn + ' B · ' + Math.round(bytesIn/2/SRC_RATE*1000) + ' ms in · ' +
+                           Math.round(playedMs) + ' ms played';
+  $('d-chunks').textContent = chunksIn + ' / ' + chunksOut;
+  $('d-mic').textContent = micOn ? ('live · ' + bytesOut + ' B sent') : 'off';
+}
+
+/* ---- microphone: browser -> PCM16 @ 16 kHz -> binary WS frames ---- */
+async function startMic(){
+  if(!(ws && ws.readyState === 1)) return toast('connect first');
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    return toast('this frame blocks the microphone — use + or type a question');
+  }
+  try{
+    micStream = await navigator.mediaDevices.getUserMedia({
+      audio:{channelCount:1, echoCancellation:true, noiseSuppression:true, autoGainControl:true}});
+  }catch(err){
+    log('getUserMedia failed: ' + (err && err.name), 'e');
+    /* §7/§8 — a sandboxed preview frame cannot grant the microphone. Give the
+       student a one-click way out instead of a dead end. */
+    if(IS_EMBEDDED){
+      banner('<b>Microphone blocked ('+(err&&err.name)+')</b> — this preview frame is not '+
+             'allowed to use the mic. Open '+
+             '<a href="'+tabUrl()+'" target="_blank" rel="noopener">the lesson in its own tab</a> '+
+             'and allow the microphone there; or type the question below.');
+    }else{
+      banner('<b>Microphone blocked ('+(err&&err.name)+')</b> — allow microphone access for this '+
+             'site in your browser (the 🔒 / site-settings button), then press the mic again.');
+    }
+    toast('microphone blocked (' + (err && err.name) + ')');
+    return;
+  }
+  micCtx = new (window.AudioContext || window.webkitAudioContext)();
+  micNode = micCtx.createMediaStreamSource(micStream);
+  micProc = micCtx.createScriptProcessor(4096, 1, 1);
+  const silent = micCtx.createGain(); silent.gain.value = 0;   // avoid feedback
+  micNode.connect(micProc); micProc.connect(silent); silent.connect(micCtx.destination);
+  micProc.onaudioprocess = (e)=>{
+    if(!(ws && ws.readyState === 1)) return;
+    const f = e.inputBuffer.getChannelData(0);
+    const ratio = micCtx.sampleRate / MIC_RATE;
+    const outLen = Math.floor(f.length / ratio);
+    const pcm = new Int16Array(outLen);
+    let peak = 0;
+    for(let i=0;i<outLen;i++){
+      let acc = 0, k = Math.floor(i*ratio), kEnd = Math.floor((i+1)*ratio);
+      for(let j=k;j<kEnd;j++) acc += f[j];
+      const v = acc / Math.max(1, kEnd-k);
+      peak = Math.max(peak, Math.abs(v));
+      pcm[i] = Math.max(-1, Math.min(1, v)) * 32767;
+    }
+    ws.send(pcm.buffer);
+    chunksOut++; bytesOut += pcm.byteLength;
+    $('meterbar').style.width = Math.min(100, peak*140) + '%';
+    $('meter').classList.add('on');
+    paintAudio();
+  };
+  micOn = true;
+  setMode('mic'); $('mic').className = 'rbtn on'; $('mic').title = 'Turn the microphone off';
+  $('status').innerHTML = '<b>listening</b> — speak, then pause';
+  toast('microphone live — speak, pause, the tutor answers');
+  paintAudio();
+}
+function stopMic(){
+  if(micProc){ micProc.onaudioprocess = null; try{micProc.disconnect()}catch(e){} }
+  if(micNode){ try{micNode.disconnect()}catch(e){} }
+  if(micCtx){ try{micCtx.close()}catch(e){} }
+  if(micStream){ micStream.getTracks().forEach(t=>t.stop()); }
+  micProc = micNode = micCtx = micStream = null;
+  micOn = false;
+  $('mic').className = 'rbtn'; $('mic').title = 'Turn the microphone on';
+  $('meter').classList.remove('on');
+  setMode(ws && ws.readyState === 1 ? 'listening' : 'idle');
+  paintAudio();
+}
+
+/* -------------------------------------------------- ui helpers */
+function setMode(m){ document.body.className = m;
+  const a=$('ask'); if(a && m!=='listening') a.classList.remove('live'); }
+function banner(msg){
+  const el = $('banner');
+  if(!msg){ el.classList.remove('show'); el.innerHTML=''; return; }
+  el.innerHTML = msg; el.classList.add('show');
+}
+function toast(t){ const el=$('toast'); el.textContent=t; el.classList.add('show');
+  clearTimeout(toast._t); toast._t = setTimeout(()=>el.classList.remove('show'), 2600); }
+function log(txt, k=''){ const d=document.createElement('div'); if(k)d.className=k;
+  d.textContent = new Date().toISOString().substr(11,8)+' '+txt;
+  $('evt').appendChild(d); $('evt').scrollTop=1e9; }
+function kind(e){
+  if(e.startsWith('provider'))return 'p';
+  if(e.startsWith('assistant')||e.startsWith('input'))return 'a';
+  if(e==='error')return 'e';
+  if(e.startsWith('session')||e.startsWith('language'))return 's';
+  return 'l';
+}
+function say(who, text){
+  $('caption').innerHTML = (who==='you' ? '<span class="you">you: </span>' : '') +
+    text.replace(/[<>&]/g, c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+}
+
+async function jreq(m,p,b){
+  const o = {method:m, headers:{'Content-Type':'application/json'}};
+  if(CFG.apiKey) o.headers['X-Voice-Service-Key'] = CFG.apiKey;
+  if(b) o.body = JSON.stringify(b);
+  let r;
+  try{ r = await fetch(BASE+p, o); }
+  catch(err){
+    banner('<b>Cannot reach the voice service</b> at <code>'+BASE+'</code> — '+err.message);
+    log('fetch '+m+' '+p+' failed: '+err.message,'e');
+    return null;
+  }
+  const t = await r.text();
+  if(!r.ok){
+    banner('<b>API error '+r.status+'</b> on <code>'+m+' '+p+'</code>: '+t.slice(0,180));
+    log(m+' '+p+' -> '+r.status+' '+t.slice(0,160),'e'); return null;
+  }
+  banner('');
+  return t ? JSON.parse(t) : {};
+}
+
+/* -------------------------------------------------- connect / disconnect */
+async function connect(){
+  // A double-tap must not create two sessions: the second WebSocket would
+  // carry the first session's token and be rejected (403).
+  if(connecting || (ws && ws.readyState <= 1)) return;
+  connecting = true;
+  $('main').disabled = true;
+  try { await openSession(); } finally { connecting = false; $('main').disabled = false; }
+}
+
+async function openSession(){
+  ensureAudio();                                    // this click is the gesture
+  banner(''); $('status').innerHTML = 'connecting…';
+  const s = await jreq('POST','/voice/session',{
+    student_id:CFG.student_id, language:langBase(CFG.language), dialect:langDialect(CFG.language),
+    course_id:CFG.course_id,
+    lesson_id:CFG.lesson_id, topic:CFG.topic, topic_id:CFG.topic_id || null,
+    level:CFG.level || null,
+    resume_latest:CFG.resume_latest});
+  if(!s){ $('status').innerHTML='could not reach the voice service'; return; }
+  sid = s.session_id;
+  log('session '+sid,'s');
+  const t = await jreq('POST','/voice/session/'+sid+'/token');
+  const url = WS_BASE + '/voice/session/'+sid+'/audio' + (t&&t.token ? '?token='+t.token : '');
+  try{ ws = new WebSocket(url); }
+  catch(err){
+    banner('<b>WebSocket could not be opened</b> to <code>'+url+'</code>'+embeddedHint());
+    return;
+  }
+  ws.binaryType='arraybuffer';
+  ws.onopen = ()=>{
+    $('dot').className='dot on'; $('conn').textContent='connected';
+    $('main').textContent='■'; $('main').className='rbtn red'; $('main').title='End session';
+    $('langchip').textContent = (CFG.languages[CFG.language]||CFG.language)+' ('+CFG.language+')';
+    setMode('idle');
+    $('status').innerHTML = CFG.topic
+      ? 'connected — teaching <b>'+CFG.topic+'</b>…'
+      : 'connected — starting the lesson…';
+    ws.send(JSON.stringify({type:'start'}));
+    clearInterval(pingTimer);
+    pingTimer = setInterval(()=>{ if(ws&&ws.readyState===1) ws.send(JSON.stringify({type:'ping'})); }, 20000);
+  };
+  ws.onerror = ()=>{
+    banner('<b>WebSocket error</b> on <code>'+url+'</code> — the service is up but the connection was rejected.'+
+           embeddedHint());
+  };
+  ws.onclose = (ev)=>{
+    $('dot').className='dot'; $('conn').textContent='disconnected';
+    $('main').textContent='●'; $('main').className='rbtn blue'; $('main').title='Connect';
+    stopMic(); stopPlayback(); stopSpeech(); setMode('idle');
+    ws = null;
+    if(ev && ev.code === 4401){
+      banner('<b>WebSocket closed: authentication (4401)</b>. Set <code>VOICE_SERVICE_API_KEY</code> '+
+             'or leave auth disabled for local demos.');
+      $('status').innerHTML='session rejected — tap ● to retry';
+    } else if(sid){
+      $('status').innerHTML='session closed — tap ● to start again';
+    }
+  };
+  ws.onmessage = (m)=>{
+    if(typeof m.data!=='string') return;
+    handle(JSON.parse(m.data));
+  };
+}
+
+function handle(e){
+  if(e.event!=='assistant.audio.chunk')
+    log(e.event+'  '+JSON.stringify(e).slice(0,150), kind(e.event));
+
+  switch(e.event){
+    case 'assistant.audio.chunk': {
+      const b = atob(e.audio||''), u = new Uint8Array(b.length);
+      for(let i=0;i<b.length;i++) u[i]=b.charCodeAt(i);
+      const n = u.length >> 1, i16 = new Int16Array(n);
+      for(let i=0;i<n;i++) i16[i] = (u[2*i] | (u[2*i+1] << 8)) << 16 >> 16;
+      chunksIn++; bytesIn += u.length;         // always counted, even when not played
+      if(!curReply) curReply = [];
+      curReply.push(i16);
+      if(voiceMode !== 'browser') playPcm(i16);
+      else paintAudio();
+      break;
+    }
+    case 'assistant.response.started':
+      curReply=[]; spokenThisTurn=false; ttsQueue='';
+      setMode('thinking'); $('status').innerHTML='<b>thinking</b>'; break;
+    case 'assistant.text.delta':
+      partial += e.text||''; say('tutor', partial);
+      speakText(e.text||''); spokenThisTurn = true; break;
+    case 'assistant.response.completed':
+      say('tutor', e.text||partial);
+      if(!spokenThisTurn){ speakText(e.text||partial); spokenThisTurn = true; }
+      flushSpeech();
+      if(curReply && curReply.length) lastReply = curReply.slice();
+      partial=''; curReply=null;
+      if(!live.length) maybeIdle();
+      break;
+    case 'input.transcript': if(e.final) say('you', e.text); break;
+    case 'assistant.interrupted':
+      stopPlayback(); stopSpeech(); partial='';
+      setMode('listening'); $('status').innerHTML='<b>interrupted</b> — go ahead, ask';
+      toast('playback stopped instantly'); break;
+    case 'checkpoint.created': toast('checkpoint saved: '+(e.checkpoint.section||e.checkpoint.topic)); break;
+    case 'resume.completed': toast('resumed from checkpoint'); break;
+    case 'session.recap':
+      say('tutor','↩ recap: '+(e.concepts_covered||[]).join(', '));
+      banner('<b>Returning student</b> — the tutor recapped '+
+             ((e.concepts_covered||[]).length ? (e.concepts_covered||[]).join(', ') : 'the previous lesson')+
+             ' and resumed from the checkpoint instead of restarting.'); break;
+    case 'visual.updated': say('tutor','📊 ['+e.visual.type+'] '+e.visual.content); break;
+    case 'language.changed':
+      // The lesson continues in the new language *and so does the voice*: leaving
+      // CFG.language behind here meant an Arabic lesson read by an English speaker.
+      if(e.dialect) CFG.language = langBase(e.to);                  // `ar` (fusHa)
+      else if(e.to && /^[a-z]{2}(-[a-z]{2,3})?$/i.test(e.to)) CFG.language = e.to.toLowerCase();
+      $('langchip').textContent = (CFG.languages[CFG.language] || e.to);
+      toast('language → ' + (CFG.languages[CFG.language] || e.to));
+      applyVoiceForLanguage(); break;
+    case 'provider.switched':
+      log('FAILOVER '+e.from+' -> '+e.to,'p'); toast('failover → '+e.to+' (lesson preserved)'); break;
+    case 'session.ended':
+      stopSpeech(); setMode('idle'); $('status').innerHTML='session ended'; break;
+    case 'error':
+      // Setup problems carry a `hint` (billing, credential, model, quota). Show it in the
+      // banner so the screen says what to do instead of just "unavailable".
+      toast(e.message||'error');
+      if(e.hint) banner('<b>'+(e.code||'error')+'</b><br>'+e.hint+
+                        (e.detail ? '<br><span style="opacity:.7">'+e.detail+'</span>' : ''));
+      break;
+  }
+  if(/^(provider|checkpoint|resume|question|session|language)/.test(e.event) || e.event==='latency')
+    refresh();
+  paintAudio();
+}
+
+/* -------------------------------------------------- controls */
+const send = (o)=>{ if(ws&&ws.readyState===1) ws.send(JSON.stringify(o)); else toast('not connected'); };
+
+$('main').onclick = ()=>{
+  ensureAudio();
+  if(ws && ws.readyState===1){ send({type:'end'}); setTimeout(()=>ws.close(),400); }
+  else connect();
+};
+
+/* §8 — one labelled button: stop the tutor, open the mic, let the student ask.
+   The lesson is not restarted; after the answer the tutor confirms and resumes. */
+$('ask').onclick = ()=>{
+  ensureAudio();
+  stopPlayback();                                   // silence the tutor mid-sentence
+  if(ws && ws.readyState===1) send({type:'interrupt'});
+  if(!micOn) startMic();                            // microphone active for the question
+  setMode('listening');
+  $('ask').classList.add('live');
+  $('status').innerHTML='<b>ask your question</b> — speak now';
+};
+
+$('mic').onclick = ()=>{ micOn ? stopMic() : startMic(); };
+
+$('voicechip').onclick = ()=>{
+  setVoiceMode(voiceMode === 'browser' ? 'service' : voiceMode === 'service' ? 'both' : 'browser');
+  toast('assistant voice: ' + voiceMode);
+};
+
+$('soundchip').onclick = ()=>{ muted = !muted;
+  if(gain) gain.gain.value = muted ? 0 : volume;
+  if(!muted){ ensureAudio(); beep(880, 140); }
+  paintSound(); toast(muted ? 'output muted' : 'sound on'); };
+
+$('vol').oninput = (e)=>{ volume = e.target.value/100; if(gain && !muted) gain.gain.value = volume;
+  $('d-vol').textContent = e.target.value + '%'; };
+
+$('plus').onclick = ()=>{                       // 0.5 s of PCM16 @ 16 kHz
+  ensureAudio();
+  if(!(ws&&ws.readyState===1)) return toast('not connected');
+  const n=8000, b=new Int16Array(n);
+  for(let i=0;i<n;i++) b[i]=Math.sin(i*0.05)*6000;
+  ws.send(b.buffer); chunksOut++; bytesOut += b.byteLength;
+  log('sent 16000 B PCM16 @16 kHz','s'); toast('sent 0.5 s of audio');
+  setMode('listening'); $('status').innerHTML='<b>listening</b>'; paintAudio();
+};
+
+$('msg').addEventListener('keydown', (ev)=>{
+  if(ev.key!=='Enter') return;
+  const t = $('msg').value.trim(); if(!t) return;
+  say('you', t); send({type:'question', text:t}); $('msg').value='';
+  setMode('thinking'); $('status').innerHTML='<b>thinking</b>';
+});
+
+function buildTopicPicker(picked){
+  const courseSel = $('s-course-sel'), topicSel = $('s-topic-sel');
+  const courses = (CFG.courses||[]).filter(c => (c.topics||[]).length);
+  if(!courses.length){
+    courseSel.innerHTML = '<option value="">(no catalogue)</option>';
+    topicSel.innerHTML = '<option value="">(no catalogue)</option>';
+    return;
+  }
+  const fillTopics = (courseId, selectId)=>{
+    const c = courses.find(x => x.id === courseId) || courses[0];
+    topicSel.innerHTML = '';
+    (c.topics||[]).forEach(t=>{
+      const o = document.createElement('option');
+      o.value = t.id;
+      o.textContent = t.title + '  ·  ' + t.sections.length + ' steps';
+      if(selectId && t.id === selectId) o.selected = true;
+      topicSel.appendChild(o);
+    });
+  };
+  courseSel.innerHTML = '';
+  courses.forEach(c=>{
+    const o = document.createElement('option');
+    o.value = c.id; o.textContent = c.title;
+    if(picked && picked.course.id === c.id) o.selected = true;
+    courseSel.appendChild(o);
+  });
+  fillTopics((picked && picked.course.id) || courses[0].id, picked && picked.topic.id);
+  courseSel.onchange = ()=>fillTopics(courseSel.value);
+}
+
+function chosenTopic(){
+  const courses = (CFG.courses||[]).filter(c => (c.topics||[]).length);
+  if(!courses.length) return null;
+  const c = courses.find(x => x.id === $('s-course-sel').value);
+  if(!c) return null;
+  return { course:c, topic:(c.topics||[]).find(t => t.id === $('s-topic-sel').value) };
+}
+
+$('topicsLink').onclick = ()=>{ location.href = 'topics'; };
+
+$('toggleDev').onclick = ()=>{ $('session').classList.remove('open');
+  $('dev').classList.toggle('open'); refresh(); };
+$('closeDev').onclick  = ()=> $('dev').classList.remove('open');
+$('toggleSession').onclick = ()=>{ $('dev').classList.remove('open');
+  $('session').classList.toggle('open'); };
+$('closeSession').onclick = ()=> $('session').classList.remove('open');
+$('go').onclick = ()=>{
+  if(connecting) return;
+  const typed = $('s-topic').value.trim();
+  const picked = chosenTopic();
+  CFG.student_id = $('s-student').value.trim() || CFG.student_id;
+  CFG.language   = $('s-lang').value;
+  CFG.resume_latest = $('s-returning').checked;
+  if(typed){
+    CFG.topic_id = null; CFG.plan = null;
+    CFG.topic = typed;
+    CFG.course_id = $('s-course').value.trim() || CFG.course_id;
+    CFG.lesson_id = $('s-lesson').value.trim()  || CFG.lesson_id;
+  } else if(picked && picked.topic){
+    CFG.topic_id = picked.topic.id;
+    CFG.topic = picked.topic.title;
+    CFG.course_id = picked.course.id;
+    CFG.lesson_id = picked.topic.id;
+    CFG.plan = picked.topic.sections || [];
+    $('d-plan').textContent = CFG.plan.map((s, i) => (i+1) + '. ' + s.title).join('  · ');
+  }
+  $('session').classList.remove('open');
+  if(ws && ws.readyState===1){ send({type:'end'}); setTimeout(()=>{ ws.close(); connect(); }, 500); }
+  else connect();
+};
+$('b-state').onclick   = refresh;
+$('b-test').onclick    = ()=>{ ensureAudio(); beep(880,150,0); beep(1175,220,0.17);
+  toast('test tone played'); };
+$('b-voice').onclick    = ()=>{
+  if(!TTS_OK) return toast('this browser has no speech synthesis');
+  stopSpeech();
+  const words = { en:'Hello, I am the LERNA voice tutor. This is the browser voice.',
+                  ar:'مرحبا، أنا معلم ليرنا الصوتي.',
+                  fr:'Bonjour, je suis le tuteur vocal LERNA.',
+                  sw:'Habari, mimi ni mwalimu wa sauti wa LERNA.',
+                  am:'ሰላም፣ እኔ የሌርና የድምፅ አስተማሪ ነኝ።',
+                  ha:'Sannu, ni ne malamin murya na LERNA.',
+                  so:'Salaan, waxaan ahay macallinka codka ee LERNA.',
+                  yo:'Ẹ n lẹ, èmi ni olùkọ́ ohùn LERNA.',
+                  ig:'Ndeewo, abụ m onye nkuzi olu LERNA.',
+                  zu:'Sawubona, ngiyingqondisi yezwi ye-LERNA.' };
+  utter(words[CFG.language] || words.en);
+  toast('speaking a sample in ' + CFG.language);
+};
+$('b-replay').onclick  = ()=>{
+  if(voiceMode !== 'browser' && lastReply.length){
+    stopPlayback(); lastReply.forEach(part=>playPcm(part)); return toast('replaying service audio');
+  }
+  if(!lastSpokenText) return toast('nothing to replay yet');
+  stopSpeech(); utter(lastSpokenText); toast('replaying the last reply');
+};
+$('b-resume').onclick  = ()=>send({type:'resume'});
+$('b-end').onclick     = ()=>{ send({type:'end'}); setTimeout(()=>ws&&ws.close(),300); };
+$('b-prov').onclick    = async ()=>{
+  const p = await jreq('GET','/health/providers'); if(!p) return;
+  log('mode='+p.mode+'  configured='+JSON.stringify(p.configured_providers),'p');
+  Object.entries((p.routing||{}).health||{}).forEach(([k,v])=>log('  '+k+': '+JSON.stringify(v),'p'));
+};
+$('b-langs').onclick   = async ()=>{
+  const l = await jreq('GET','/voice/languages'); if(!l) return;
+  l.languages.forEach(x=>log((x.realtime_native?'[realtime] ':'[cascade ] ')+x.code+'  '+
+    x.primary_pipeline.signature, 'l'));
+};
+
+async function refresh(){
+  if(!sid) return;
+  const s = await jreq('GET','/voice/session/'+sid+'/state'); if(!s) return;
+  const d = s.diagnostics||{};
+  const pipe = d.active_provider || (s.active_pipeline&&s.active_pipeline.signature) || '—';
+  $('d-pipe').textContent = pipe;
+  $('pipechip').textContent = 'pipeline: '+pipe;
+  $('d-state').textContent = s.state;
+  $('d-lang').textContent  = s.language;
+  $('d-level').textContent = s.student_level || '—';
+  const ex = s.explanation || {};
+  const moves = ex.moves || [];
+  $('d-moves').textContent = moves.length
+    ? moves.map(m => m.kind === 'hook' ? 'picture' : m.kind).join(' › ') + '  (' + moves.length + ')'
+    : '—';
+  $('d-src').textContent   = (ex.sources||[]).map(x => x.publisher).join(', ') || '—';
+  $('d-reason').textContent= d.fallback_reason || 'none';
+  $('d-retry').textContent = d.retry_count||0;
+  $('d-fail').textContent  = d.failover_count||0;
+  $('d-cyc').textContent   = (s.interrupt_count||0)+' / '+(s.resume_count||0);
+  const lat = d.latency||{}; const ks = Object.keys(lat);
+  $('d-lat').textContent   = ks.length ? ks.map(k=>k+'='+Math.round(lat[k])+'ms').join('  ') : '—';
+  $('d-cp').textContent    = s.checkpoint ? (s.checkpoint.section||s.checkpoint.topic||'yes') : 'none';
+  const plan = s.lesson_plan||[];
+  const at = plan.findIndex(x => x.title === s.current_section);
+  $('d-plan').textContent  = plan.length
+    ? (at >= 0 ? 'step '+(at+1)+'/'+plan.length+' · ' : '') +
+      plan.map((x, i) => (i+1) + '. ' + x.title).join('  · ')
+    : ($('d-plan').textContent === '—' ? '—' : $('d-plan').textContent);
+  $('d-con').textContent   = (s.concepts_covered||[]).join(', ') || '—';
+  $('d-q').textContent     = (s.unresolved_questions||[]).length + ' open · ' +
+                             (s.question_count||(s.student_questions||[]).length) + ' asked';
+  paintAudio();
+}
+
+(function boot(){
+  // ---------------------------------------------------------------- deep link
+  // The topic picker (/topics) links here with ?topic_id=…&language=…&student=…
+  const q = new URLSearchParams(location.search);
+  const qLevel = q.get('level');            // beginner | intermediate | advanced
+  if(qLevel) CFG.level = qLevel;
+  const qTopic = q.get('topic_id');
+  let picked = null;
+  if(qTopic && (CFG.courses||[]).length){
+    for(const c of CFG.courses){
+      const t = (c.topics||[]).find(x => x.id === qTopic);
+      if(t){ picked = {course:c, topic:t}; break; }
+    }
+  }
+  if(q.get('language')) CFG.language = q.get('language');
+  if(q.get('student'))  CFG.student_id = q.get('student');
+  if(q.get('returning')) CFG.resume_latest = q.get('returning') !== '0';
+  if(picked){
+    CFG.topic_id = picked.topic.id;
+    CFG.topic = picked.topic.title;
+    CFG.course_id = picked.course.id;
+    CFG.lesson_id = picked.topic.id;
+    CFG.plan = picked.topic.sections || [];
+  }
+
+  // seed the session drawer from config
+  $('s-student').value = CFG.student_id;
+  $('s-course').value  = CFG.course_id;
+  $('s-lesson').value  = CFG.lesson_id;
+  $('s-topic').value   = picked ? '' : CFG.topic;
+  $('s-returning').checked = !!CFG.resume_latest;
+  buildTopicPicker(picked);
+  const sel = $('s-lang');
+  Object.keys(CFG.languages).forEach(code=>{
+    const o = document.createElement('option');
+    o.value = code; o.textContent = CFG.languages[code] + ' (' + code + ')';
+    if(code === CFG.language) o.selected = true;
+    sel.appendChild(o);
+  });
+  sel.onchange = ()=>{
+    const wanted = sel.value, previous = CFG.language;
+    CFG.language = wanted;
+    $('langchip').textContent = CFG.languages[wanted] + ' (' + wanted + ')';
+    applyVoiceForLanguage();
+    if(ws && ws.readyState === 1){
+      // Live session: tell the tutor to continue in the new language now. The
+      // service answers in it (and keeps the same lesson step) — no reconnect,
+      // no waiting for the student to speak first.
+      setMode('thinking');
+      ws.send(JSON.stringify({type:'language', language:wanted}));
+      log('language '+previous+' → '+wanted,'s');
+      toast('switching to '+CFG.languages[wanted]+'…');
+      say('tutor','Switching to '+CFG.languages[wanted]+' — stay on the same step.');
+    } else {
+      toast('language set to '+CFG.languages[wanted]+' — applies when you connect');
+    }
+  };
+
+  if(CFG.plan && CFG.plan.length){
+    say('tutor', 'Ready: ' + CFG.topic + ' — ' + CFG.plan.length + ' steps. Tap ● to start.');
+    $('d-plan').textContent = CFG.plan.map((s, i) => (i+1) + '. ' + s.title).join('  · ');
+  }
+  paintSound();
+  paintVoice();
+  if(TTS_OK){
+    loadTtsVoices();
+    window.speechSynthesis.addEventListener
+      ? window.speechSynthesis.addEventListener('voiceschanged', loadTtsVoices)
+      : (window.speechSynthesis.onvoiceschanged = loadTtsVoices);
+    setTimeout(loadTtsVoices, 250);           // some browsers populate late
+  } else {
+    $('d-tts').textContent = 'no speech synthesis — using service audio';
+    setVoiceMode('service');
+  }
+  $('langchip').textContent = (CFG.languages[CFG.language]||CFG.language)+' ('+CFG.language+')';
+  // Browsers only allow audio to start from a user gesture, and they may
+  // suspend the context again at any time — so re-arm it on every click.
+  document.addEventListener('click', ()=>ensureAudio());
+  setInterval(paintAudio, 1000);
+
+  jreq('GET','/health').then(h=>{
+    if(!h) return;
+    log('service '+h.service+' · '+h.status+' at '+(BASE||HOST_ORIGIN), 's');
+    // With live vendors the tutor's own neural voice comes down the socket — play it.
+    // On the mock (synthetic PCM) the browser voice is the clear-sounding option.
+    if(h.mock_providers === false){
+      setVoiceMode('service');
+      $('d-tts').textContent = 'vendor voice' + (h.live_model ? ' · '+h.live_model : '') +
+                               ' (auth: '+(h.gemini_auth||'n/a')+')';
+      log('live voice: '+(h.live_model||'vendor')+' · mode '+h.provider_mode+
+          ' · gemini auth '+h.gemini_auth, 's');
+    } else if(h.demo_voice){
+      // The dialogue is offline but the *speech* is a real vendor: play what the
+      // service sends instead of voicing the transcript here — that is the human
+      // voice. The switch stays available if the student prefers the browser one.
+      setVoiceMode('service');
+      $('d-tts').textContent = h.demo_voice + ' (human voice)';
+      log('demo voice: '+h.demo_voice+' — playing the service audio', 's');
+      banner('<b>Human voice on</b> — the tutor is speaking with <b>'+h.demo_voice+
+             '</b>. Prefer your device voice? Switch Voice mode to “browser”.');
+    } else {
+      log('mock providers: voicing the transcript in the browser (set AZURE_SPEECH_KEY or ELEVENLABS_API_KEY for a human voice)', 's');
+    }
+  });
+  if(IS_EMBEDDED){
+    banner('Embedded preview detected'+ (IS_OPAQUE ? ' (opaque origin)' : '') +
+           ' — if the microphone or the socket is blocked, open ' +
+           '<a href="'+tabUrl()+'" target="_blank" rel="noopener">the page in its own tab</a>.');
+  }
+})();
+</script>
+</body>
+</html>

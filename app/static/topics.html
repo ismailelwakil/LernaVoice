@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>LERNA Voice — choose a topic</title>
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;min-height:100%;background:#08090c;color:#e6edf3;
+    font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  a{color:#7fa8ff}
+  .wrap{max-width:1180px;margin:0 auto;padding:26px 20px 60px}
+
+  header{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;
+    flex-wrap:wrap;margin-bottom:8px}
+  h1{font-size:23px;margin:0 0 4px;font-weight:600;letter-spacing:-.01em}
+  .sub{color:#8b98ab;font-size:13px}
+  .chips{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+  .chip{font:11px ui-monospace,Menlo,monospace;color:#9aa7bd;background:#12161f;
+    border:1px solid #222b3c;border-radius:999px;padding:5px 11px;white-space:nowrap}
+  .chip.live{border-color:#2b6b3a;color:#8ff0ac;background:#0f1a12}
+  .chip.btn{cursor:pointer}.chip.btn:hover{border-color:#4f8cff;color:#cfe0ff}
+
+  .bar{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin:18px 0 22px;
+    padding:14px;background:#0e1117;border:1px solid #1a2029;border-radius:12px}
+  .field{display:flex;flex-direction:column;gap:4px}
+  .field label{font-size:10.5px;color:#7b8698;text-transform:uppercase;letter-spacing:.07em}
+  .field select,.field input{background:#141924;border:1px solid #222b3c;border-radius:8px;
+    color:#e6edf3;padding:8px 10px;font-size:13px;min-width:170px;outline:0}
+  .field select:focus,.field input:focus{border-color:#4f8cff}
+  .grow{flex:1;min-width:150px}
+  .hint{color:#5f6b7d;font-size:11.5px;margin-left:auto;max-width:330px;text-align:right}
+
+  h2{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:#8b98ab;
+    margin:26px 0 12px;font-weight:600}
+  .courses{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+  .cbtn{background:#111621;border:1px solid #212a38;color:#c7d2e3;border-radius:10px;
+    padding:9px 13px;cursor:pointer;font-size:13px;text-align:left;line-height:1.35}
+  .cbtn:hover{border-color:#4f8cff}
+  .cbtn.on{border-color:#2f6bff;background:#151d33;color:#fff}
+  .cbtn small{display:block;color:#6f7c8f;font-size:11px}
+
+  .grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(320px,1fr))}
+  .card{background:#0e1117;border:1px solid #1a2029;border-radius:14px;padding:16px;
+    display:flex;flex-direction:column;gap:10px;transition:border-color .15s}
+  .card:hover{border-color:#31405c}
+  .card h3{margin:0;font-size:15.5px;font-weight:600;letter-spacing:-.01em}
+  .card p{margin:0;color:#9fadc0;font-size:12.8px}
+  .meta{display:flex;gap:6px;flex-wrap:wrap}
+  .tag{font:10.5px ui-monospace,monospace;color:#8b98ab;background:#141a24;
+    border:1px solid #202836;border-radius:6px;padding:3px 7px}
+  .tag.lv{border-color:#2c4a33;color:#8ff0ac;background:#0f1a12}
+  .concepts{color:#7b8698;font-size:11.8px}
+  .steps{margin:0;padding-left:18px;color:#a9b6c8;font-size:12.4px}
+  .steps li{margin:2px 0}
+  .actions{display:flex;gap:8px;align-items:center;margin-top:auto;padding-top:4px}
+  button.start{background:#2f6bff;border:0;color:#fff;border-radius:9px;padding:9px 14px;
+    font-size:13px;cursor:pointer;font-weight:500}
+  button.start:hover{filter:brightness(1.1)}
+  button.ghost{background:transparent;border:1px solid #2a3444;color:#c7d2e3;
+    border-radius:9px;padding:9px 12px;font-size:12.5px;cursor:pointer}
+  button.ghost:hover{border-color:#4f8cff}
+  .banner{display:none;background:#2a1414;border:1px solid #6b2b2b;color:#ffc9c9;
+    border-radius:10px;padding:10px 13px;font-size:12.8px;margin-bottom:16px}
+  .banner.show{display:block}
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#1b2130;
+    border:1px solid #2a3344;color:#cfd9e8;padding:9px 15px;border-radius:9px;font-size:12.8px;
+    opacity:0;transition:opacity .3s;pointer-events:none;z-index:40}
+  .toast.show{opacity:1}
+  footer{margin-top:34px;color:#5f6b7d;font-size:11.5px;line-height:1.7}
+  code{font:11.5px ui-monospace,monospace;color:#a9b6c8;background:#111621;
+    border:1px solid #1a2029;border-radius:5px;padding:1px 5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>What should the tutor teach?</h1>
+      <div class="sub">Pick a topic and a language — the tutor teaches the plan below, step by step, out loud.</div>
+    </div>
+    <div class="chips">
+      <span class="chip" id="statChip">catalogue…</span>
+      <span class="chip btn" id="svcChip">service: …</span>
+      <span class="chip btn" id="voiceLink">voice screen →</span>
+    </div>
+  </header>
+
+  <div class="banner" id="banner"></div>
+
+  <div class="bar">
+    <div class="field">
+      <label for="lang">Language</label>
+      <select id="lang"></select>
+    </div>
+    <div class="field">
+      <label for="student">Student ID</label>
+      <input id="student" value="demo-student-001" />
+    </div>
+    <div class="field">
+      <label for="level">Level</label>
+      <select id="level">
+        <option value="">all levels</option>
+        <option value="beginner">beginner</option>
+        <option value="intermediate">intermediate</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="explain">Explain for</label>
+      <select id="explain">
+        <option value="">student's profile</option>
+        <option value="beginner">beginner</option>
+        <option value="intermediate">intermediate</option>
+        <option value="advanced">advanced</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="returning">Returning student</label>
+      <select id="returning">
+        <option value="0">no — start fresh</option>
+        <option value="1">yes — recap and resume</option>
+      </select>
+    </div>
+    <div class="hint" id="langHint"></div>
+  </div>
+
+  <h2>Courses</h2>
+  <div class="courses" id="courses"></div>
+
+  <h2 id="topicHeading">Topics</h2>
+  <div class="grid" id="grid"></div>
+
+  <footer>
+    Every topic below is taught against a section plan, so checkpoints reference real lesson
+    steps (<code>/voice/session/{id}/state</code> → <code>lesson_plan</code>).
+    Catalogue JSON is also available at <code>/curriculum/courses</code>; a session is created
+    with <code>POST /voice/session {{"topic_id": "…", "language": "…", "level": "beginner"}}</code>.
+    The level shapes the explanation the tutor teaches from, not the syllabus: the same topic
+    and the same checkpoints, pitched for a beginner, an intermediate or an advanced student.
+    This page is a testing surface, not the product frontend.
+  </footer>
+</div>
+<div class="toast" id="toast"></div>
+
+<script id="catalog" type="application/json">/*__CATALOG_JSON__*/{"courses":[],"languages":[]}</script>
+
+<script>
+const DATA = JSON.parse(document.getElementById('catalog').textContent);
+const $ = (i)=>document.getElementById(i);
+let COURSES = (DATA.courses||[]).filter(c => (c.topics||[]).length);
+let LANGUAGES = DATA.languages || [];
+/* Round 32: expose academic Egyptian Arabic as its own selectable option. It rides on
+   the base language `ar` with register `ar-EG` (Salma voice), so capability routing,
+   pipeline plans and the 10-language coverage are untouched. */
+(function(){
+  const ar = LANGUAGES.find(l=>l.code==='ar');
+  if (ar && !LANGUAGES.some(l=>l.code==='ar-eg')) {
+    LANGUAGES.splice(LANGUAGES.indexOf(ar)+1, 0,
+      Object.assign({}, ar, {code:'ar-eg', name:'العربية المصرية · Egyptian (academic)'}));
+  }
+})();
+let activeCourse = COURSES.length ? COURSES[0].id : null;
+let levelFilter = '';
+
+function toast(t){ const el=$('toast'); el.textContent=t; el.classList.add('show');
+  clearTimeout(toast._t); toast._t = setTimeout(()=>el.classList.remove('show'), 2400); }
+function banner(msg){ const el=$('banner');
+  if(!msg){ el.classList.remove('show'); el.innerHTML=''; return; }
+  el.innerHTML = msg; el.classList.add('show'); }
+
+/* ---------------------------------------------------------------- language */
+function buildLanguages(){
+  const sel = $('lang');
+  // One entry per language. Arabic is taught in fusHa (app/voice/dialects.py);
+  // `l.name` already carries that wording from the catalogue.
+  LANGUAGES.forEach(l=>{
+    const o = document.createElement('option');
+    o.value = l.code;
+    o.textContent = l.name + ' (' + l.code + ')'
+                  + (l.realtime_native ? '' : ' · composed pipeline');
+    sel.appendChild(o);
+  });
+  sel.value = DATA.defaultLanguage || 'en';
+  sel.onchange = paintLanguage;
+  paintLanguage();
+}
+function selectedLanguage(){
+  return LANGUAGES.find(l => l.code === $('lang').value) || { code:'en', name:'English' };
+}
+function paintLanguage(){
+  const l = selectedLanguage();
+  const tts = (window.speechSynthesis && window.speechSynthesis.getVoices) ?
+              window.speechSynthesis.getVoices() : [];
+  const base = String(l.code || 'en').split('-')[0].toLowerCase();
+  const installed = tts.filter(v => (v.lang||'').toLowerCase().startsWith(base)).length;
+  const native = l.realtime_native;
+  $('langHint').innerHTML =
+    (native
+      ? '<b>' + l.name + '</b> is served by Gemini Live end to end (speech in, speech out).'
+      : '<b>' + l.name + '</b> has no native realtime model in the catalogue, so the service ' +
+        'composes a pipeline for it (speech in → text → speech out).') +
+    (isFinite(installed) ? '<br>' + (installed
+        ? installed + ' browser voice' + (installed > 1 ? 's' : '') + ' installed for this language.'
+        : 'No browser voice installed for this language — the demo will fall back to English speech.') : '');
+}
+function languagePipelines(){
+  return LANGUAGES.map(l => l.code + '=' + (l.primary_pipeline ? l.primary_pipeline.signature : 'n/a'));
+}
+
+/* ---------------------------------------------------------------- catalogue */
+function buildCourses(){
+  const wrap = $('courses');
+  wrap.innerHTML = '';
+  COURSES.forEach(c=>{
+    const b = document.createElement('button');
+    b.className = 'cbtn' + (c.id === activeCourse ? ' on' : '');
+    b.innerHTML = c.title + '<small>' + c.subject + ' · ' + c.topic_count + ' topics</small>';
+    b.onclick = ()=>{ activeCourse = c.id; buildCourses(); buildTopics(); };
+    wrap.appendChild(b);
+  });
+}
+function buildTopics(){
+  const grid = $('grid');
+  grid.innerHTML = '';
+  const course = COURSES.find(c => c.id === activeCourse);
+  if(!course){ grid.innerHTML = '<p style="color:#8b98ab">No courses in the catalogue.</p>'; return; }
+  $('topicHeading').textContent = course.title + ' — ' + course.description;
+  const topics = (course.topics||[]).filter(t => !levelFilter || t.level === levelFilter);
+  if(!topics.length){
+    grid.innerHTML = '<p style="color:#8b98ab">Nothing at that level in this course.</p>'; return;
+  }
+  topics.forEach(t=>{
+    const card = document.createElement('div');
+    card.className = 'card';
+    const steps = (t.sections||[]).map(s => '<li><b>' + esc(s.title) + '</b> — ' + esc(s.goal) + '</li>').join('');
+    card.innerHTML =
+      '<h3>' + esc(t.title) + '</h3>' +
+      '<p>' + esc(t.summary) + '</p>' +
+      '<div class="meta"><span class="tag lv">' + t.level + '</span>' +
+        '<span class="tag">' + t.minutes + ' min</span>' +
+        '<span class="tag">' + (t.sections||[]).length + ' steps</span>' +
+        '<span class="tag">' + (t.concepts||[]).length + ' concepts</span></div>' +
+      '<ol class="steps">' + steps + '</ol>' +
+      '<div class="concepts">' + (t.concepts||[]).map(esc).join(' · ') + '</div>' +
+      '<div class="actions">' +
+        '<button class="start">Start lesson</button>' +
+        '<button class="ghost" data-q="' + esc((t.questions||[])[0] || '') + '">Prep questions</button>' +
+      '</div>';
+    card.querySelector('.start').onclick = ()=>start(t);
+    card.querySelector('.ghost').onclick = ()=>
+      toast((t.questions||[]).length ? t.questions.join('  ·  ') : 'no suggested questions');
+    grid.appendChild(card);
+  });
+}
+function esc(s){ return String(s==null?'':s).replace(/[<>&"]/g,
+  c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c])); }
+
+/* ---------------------------------------------------------------- start */
+function url(path, params){
+  // Served by the service itself, so relative URLs are correct here — and the
+  // voice screen derives the service host when it is embedded elsewhere.
+  const q = new URLSearchParams(params).toString();
+  return path + (q ? '?' + q : '');
+}
+function start(topic){
+  const lang = $('lang').value;
+  const params = {
+    topic_id: topic.id,
+    language: lang,
+    student: $('student').value.trim() || 'demo-student-001',
+    returning: $('returning').value,
+    autostart: '1',
+  };
+  // Empty = the level stored in the student's profile decides (see /voice/session).
+  const level = $('explain').value; if(level) params.level = level;
+  toast('starting ' + topic.title + ' in ' + selectedLanguage().name);
+  location.href = url('voice', params);
+}
+function openVoice(){
+  const params = { language: $('lang').value, student: $('student').value.trim() || 'demo-student-001' };
+  const level = $('explain').value; if(level) params.level = level;
+  location.href = url('voice', params);
+}
+
+/* ---------------------------------------------------------------- boot */
+buildLanguages();
+buildCourses();
+buildTopics();
+if(window.speechSynthesis && window.speechSynthesis.addEventListener)
+  window.speechSynthesis.addEventListener('voiceschanged', paintLanguage);
+
+$('level').onchange = (e)=>{ levelFilter = e.target.value; buildTopics(); };
+$('voiceLink').onclick = openVoice;
+$('svcChip').onclick = ()=>{
+  banner('Language routing:<br><code>' + languagePipelines().join('   ') + '</code>');
+};
+
+(async ()=>{
+  const stats = DATA.stats || {};
+  $('statChip').textContent = (stats.courses||COURSES.length) + ' courses · ' +
+    (stats.topics||0) + ' topics · ' + (stats.sections||0) + ' lesson steps';
+  try{
+    const h = await fetch('health').then(r => r.json());
+    $('svcChip').textContent = 'service: ' + h.status + ' · ' + h.service;
+    $('svcChip').className = 'chip btn live';
+  }catch(e){
+    $('svcChip').textContent = 'service: unreachable';
+    banner('<b>Cannot reach the voice service.</b> The catalogue below is embedded, so it still '
+         + 'renders, but starting a lesson will fail until the service responds.');
+  }
+})();
+</script>
+</body>
+</html>

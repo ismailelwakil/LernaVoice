@@ -1,0 +1,17 @@
+.env
+.env.*
+!.env.example
+.secrets/
+*service-account*.json
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.wav
+*.pcm
+*.mp3
+data/audio/
+.DS_Store

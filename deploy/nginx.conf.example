@@ -1,0 +1,43 @@
+# Reverse proxy for the LERNA Voice AI service.
+# The important part is the WebSocket upgrade + long idle timeouts: a voice
+# lesson is one long-lived WS, and a proxy that buffers or times out kills it.
+
+upstream voice_ai {
+    server 127.0.0.1:8080;
+    keepalive 32;
+}
+
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
+server {
+    listen 443 ssl;
+    server_name voice.your-domain;
+
+    # ssl_certificate     /etc/letsencrypt/live/voice.your-domain/fullchain.pem;
+    # ssl_certificate_key /etc/letsencrypt/live/voice.your-domain/privkey.pem;
+
+    # A lesson can run for many minutes; don't cut it short.
+    proxy_read_timeout    3600s;
+    proxy_send_timeout    3600s;
+    proxy_connect_timeout 60s;
+
+    location / {
+        proxy_pass http://voice_ai;
+        proxy_http_version 1.1;
+
+        # WebSocket upgrade (the /voice/session/{id}/audio endpoint).
+        proxy_set_header Upgrade           $http_upgrade;
+        proxy_set_header Connection        $connection_upgrade;
+
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Stream audio through; never buffer a real-time response.
+        proxy_buffering off;
+    }
+}

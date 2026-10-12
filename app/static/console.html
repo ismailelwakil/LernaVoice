@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>LERNA Voice AI — test console</title>
+<style>
+  :root{
+    --bg:#0e1117; --panel:#161b26; --panel2:#1c2230; --line:#2a3344;
+    --text:#e6edf3; --dim:#8b98ab; --accent:#4f8cff; --ok:#3fb950;
+    --warn:#d29922; --err:#f85149; --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+       font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  header{padding:14px 20px;border-bottom:1px solid var(--line);display:flex;
+         align-items:center;gap:12px;flex-wrap:wrap}
+  header h1{font-size:16px;margin:0;font-weight:600}
+  .tag{font:11px var(--mono);padding:2px 8px;border-radius:999px;
+       background:var(--panel2);color:var(--dim);border:1px solid var(--line)}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--err);display:inline-block}
+  .dot.on{background:var(--ok)}
+  main{display:grid;grid-template-columns:320px 1fr 380px;gap:14px;padding:14px;
+       align-items:start}
+  @media(max-width:1100px){main{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px}
+  .card h2{font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+           color:var(--dim);margin:0 0 10px}
+  label{display:block;font-size:12px;color:var(--dim);margin:8px 0 3px}
+  input,select,textarea{width:100%;background:var(--panel2);border:1px solid var(--line);
+    color:var(--text);border-radius:6px;padding:7px 9px;font-size:13px;font-family:inherit}
+  button{background:var(--panel2);border:1px solid var(--line);color:var(--text);
+    border-radius:6px;padding:7px 11px;font-size:13px;cursor:pointer}
+  button:hover:not(:disabled){border-color:var(--accent)}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  button.danger{border-color:#5a2a2a;color:#ff9b94}
+  .row{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+  .row>button{flex:1 1 auto}
+  .kv{display:flex;justify-content:space-between;gap:10px;padding:5px 0;
+      border-bottom:1px solid var(--line);font-size:13px}
+  .kv:last-child{border-bottom:0}
+  .kv span:first-child{color:var(--dim)}
+  .kv span:last-child{font-family:var(--mono);text-align:right;word-break:break-all}
+  #log{height:300px;overflow:auto;background:#0b0e14;border:1px solid var(--line);
+       border-radius:6px;padding:8px;font:11.5px/1.45 var(--mono)}
+  #log div{padding:1px 0;white-space:pre-wrap;word-break:break-word}
+  .e-provider{color:#a371f7}.e-assist{color:#58a6ff}.e-learn{color:#3fb950}
+  .e-err{color:var(--err)}.e-sess{color:#e3b341}.e-dim{color:var(--dim)}
+  #chat{height:230px;overflow:auto;display:flex;flex-direction:column;gap:8px}
+  .bub{padding:8px 11px;border-radius:9px;max-width:85%;font-size:13px}
+  .bub.tutor{background:var(--panel2);align-self:flex-start}
+  .bub.you{background:#1d3557;align-self:flex-end}
+  .bub b{display:block;font-size:10px;color:var(--dim);margin-bottom:2px;letter-spacing:.05em}
+  .pill{display:inline-block;font:11px var(--mono);padding:2px 7px;border-radius:5px;
+        background:var(--panel2);border:1px solid var(--line);margin:2px 3px 0 0}
+  .note{font-size:11.5px;color:var(--dim);margin-top:8px}
+  .bar{display:flex;gap:8px;align-items:center;margin-top:10px}
+  .big{font:600 15px var(--mono);color:var(--accent)}
+</style>
+</head>
+<body>
+<header>
+  <h1>🎙️ LERNA Voice AI</h1>
+  <span class="tag">test console</span>
+  <span class="tag"><span class="dot" id="wsdot"></span> <span id="wstxt">disconnected</span></span>
+  <span class="tag" id="svc">service …</span>
+  <span class="tag" id="modepill">—</span>
+</header>
+
+<main>
+  <!-- ------------------------------------------------ session -->
+  <section class="card">
+    <h2>Session</h2>
+    <label>Student ID</label><input id="student" value="demo-student-001" />
+    <label>Course / Lesson</label>
+    <div style="display:flex;gap:6px">
+      <input id="course" value="algorithms-101" /><input id="lesson" value="lesson-binary-search" />
+    </div>
+    <label>Topic</label><input id="topic" value="Binary Search" />
+    <label>Language</label>
+    <select id="lang">
+      <option value="en">English (en)</option>
+      <option value="ar" selected>العربية — Arabic (ar)</option>
+      <option value="ar-eg">المصرية — Egyptian (ar-eg)</option>
+      <option value="fr">Français (fr)</option>
+      <option value="sw">Kiswahili (sw)</option>
+      <option value="am">አማርኛ — Amharic (am)</option>
+      <option value="ha">Hausa (ha)</option>
+      <option value="so">Soomaali (so)</option>
+      <option value="yo">Yorùbá (yo)</option>
+      <option value="ig">Igbo (ig) — cascade pipeline</option>
+      <option value="zu">isiZulu (zu)</option>
+    </select>
+    <label>Level</label>
+    <select id="lvl">
+      <option value="">student's profile</option>
+      <option value="beginner">beginner</option>
+      <option value="intermediate">intermediate</option>
+      <option value="advanced">advanced</option>
+    </select>
+    <label style="margin-top:10px">
+      <input type="checkbox" id="returning" style="width:auto" /> Returning student (recap)
+    </label>
+    <div class="row">
+      <button class="primary" id="btnCreate">Create + connect</button>
+      <button class="danger" id="btnEnd" disabled>End</button>
+    </div>
+    <div class="note">Mock providers serve synthetic audio, so no vendor keys are needed —
+      the real router, cascade builder and failover logic are all live.</div>
+  </section>
+
+  <!-- ------------------------------------------------ lesson -->
+  <section class="card">
+    <h2>Lesson</h2>
+    <div class="row">
+      <button id="btnStart" disabled>▶ Start lesson</button>
+      <button id="btnInt" disabled>✋ Interrupt (barge-in)</button>
+      <button id="btnResume" disabled>⏪ Resume</button>
+      <button id="btnPause" disabled>⏸ Pause</button>
+      <button id="btnMic" disabled>🎤 Send 0.5 s audio</button>
+    </div>
+    <label style="margin-top:12px">Ask a question (interrupts, then answers, then you resume)</label>
+    <div style="display:flex;gap:6px">
+      <input id="q" placeholder="ليه بنقسم المصفوفة على اتنين؟" />
+      <button class="primary" id="btnAsk" disabled>Ask</button>
+    </div>
+    <div class="bar">
+      <select id="lang2" style="flex:1">
+        <option value="en">en</option><option value="ar">ar</option><option value="fr">fr</option>
+        <option value="sw">sw</option><option value="am">am</option><option value="ha">ha</option>
+        <option value="so">so</option><option value="yo">yo</option><option value="ig">ig</option>
+        <option value="zu">zu</option>
+      </select>
+      <button id="btnLang" disabled>Switch language mid-lesson</button>
+    </div>
+    <div class="bar">
+      <select id="lvl2" style="flex:1">
+        <option value="beginner">beginner</option>
+        <option value="intermediate" selected>intermediate</option>
+        <option value="advanced">advanced</option>
+      </select>
+      <button id="btnLevel" disabled>Re-pitch the explanation</button>
+    </div>
+
+    <h2 style="margin-top:16px">Conversation</h2>
+    <div id="chat"></div>
+
+    <h2 style="margin-top:16px">Tutor audio <span id="audiometa" class="tag"></span></h2>
+    <div class="row">
+      <button id="btnPlay" disabled>🔊 Play received PCM</button>
+      <button id="btnTest">🔔 Test sound</button>
+      <button id="btnClearAudio" disabled>Clear buffer</button>
+    </div>
+    <div class="note">Audio arrives as base64 PCM16 @ 24 kHz inside
+      <code>assistant.audio.chunk</code> and is decoded in the browser.</div>
+  </section>
+
+  <!-- ------------------------------------------------ diagnostics -->
+  <section class="card">
+    <h2>Developer diagnostics</h2>
+    <div class="kv"><span>Active pipeline</span><span id="d-pipe" class="big">—</span></div>
+    <div class="kv"><span>State</span><span id="d-state">—</span></div>
+    <div class="kv"><span>Language</span><span id="d-lang">—</span></div>
+    <div class="kv"><span>Fallback reason</span><span id="d-reason">none</span></div>
+    <div class="kv"><span>Retries / failovers</span><span id="d-retry">0 / 0</span></div>
+    <div class="kv"><span>Interrupts / resumes</span><span id="d-cycles">0 / 0</span></div>
+    <div class="kv"><span>Latency</span><span id="d-lat">—</span></div>
+    <div class="kv"><span>Checkpoint</span><span id="d-cp">none</span></div>
+    <div class="kv"><span>Concepts covered</span><span id="d-con">—</span></div>
+    <div class="row">
+      <button id="btnState" disabled>Refresh state</button>
+      <button id="btnProv">Provider health</button>
+      <button id="btnLangs">Language matrix</button>
+    </div>
+    <h2 style="margin-top:16px">Event stream</h2>
+    <div id="log"></div>
+  </section>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+/* protocol + host, never `location.origin`: inside a sandboxed preview iframe the
+   origin is opaque and `location.origin` is the string "null". */
+const ORIGIN = location.protocol + '//' + location.host;
+const api = (p) => ORIGIN + p;
+let sid = null, ws = null, pcm = [], pcmBytes = 0, ctx = null, src = null;
+let live = [], nextAt = 0;          // streaming playback queue
+
+function log(msg, cls='e-dim'){
+  const d = document.createElement('div');
+  d.className = cls;
+  d.textContent = new Date().toISOString().substr(11,12) + '  ' + msg;
+  $('log').appendChild(d); $('log').scrollTop = 1e9;
+}
+function cls(ev){
+  if(ev.startsWith('provider')) return 'e-provider';
+  if(ev.startsWith('assistant')||ev.startsWith('input')) return 'e-assist';
+  if(ev==='error') return 'e-err';
+  if(ev.startsWith('session')||ev.startsWith('language')) return 'e-sess';
+  if(ev.startsWith('checkpoint')||ev.startsWith('question')||ev.startsWith('resume')
+     ||ev.startsWith('learning')||ev.startsWith('visual')||ev.startsWith('rag')) return 'e-learn';
+  return 'e-dim';
+}
+function bubble(who, text){
+  const b = document.createElement('div');
+  b.className = 'bub ' + (who==='you'?'you':'tutor');
+  b.innerHTML = '<b>' + (who==='you'?'STUDENT':'TUTOR') + '</b>';
+  b.appendChild(document.createTextNode(text));
+  $('chat').appendChild(b); $('chat').scrollTop = 1e9;
+}
+function enable(on){
+  ['btnStart','btnInt','btnResume','btnPause','btnAsk','btnLang','btnLevel','btnEnd','btnState','btnMic']
+    .forEach(i=>$(i).disabled=!on);
+}
+
+async function jreq(method, path, body){
+  const r = await fetch(api(path), {
+    method, headers:{'Content-Type':'application/json'},
+    body: body?JSON.stringify(body):undefined });
+  const t = await r.text();
+  if(!r.ok){ log(method+' '+path+' → '+r.status+' '+t.slice(0,200), 'e-err'); return null; }
+  return t?JSON.parse(t):{};
+}
+
+// ---------------------------------------------------------------- create
+$('btnCreate').onclick = async () => {
+  actx();                                   // unlock audio in this gesture
+  if(ws){ try{ws.close()}catch(e){} }
+  $('chat').innerHTML=''; $('log').innerHTML=''; pcm=[]; pcmBytes=0; updAudio();
+  const s = await jreq('POST','/voice/session',{
+    student_id:$('student').value, language:$('lang').value,
+    course_id:$('course').value, lesson_id:$('lesson').value,
+    topic:$('topic').value, level:$('lvl').value || null,
+    resume_latest:$('returning').checked});
+  if(!s) return;
+  sid = s.session_id;
+  log('session created '+sid, 'e-sess');
+  const t = await jreq('POST','/voice/session/'+sid+'/token');
+  const proto = location.protocol==='https:'?'wss://':'ws://';
+  ws = new WebSocket(proto+location.host+'/voice/session/'+sid+'/audio'+(t?'?token='+t.token:''));
+  ws.binaryType='arraybuffer';
+  ws.onopen  = ()=>{ $('wsdot').className='dot on'; $('wstxt').textContent='connected';
+                     enable(true); log('websocket open','e-sess'); };
+  ws.onclose = ()=>{ $('wsdot').className='dot'; $('wstxt').textContent='disconnected';
+                     enable(false); log('websocket closed','e-dim'); };
+  ws.onerror = ()=>log('websocket error','e-err');
+  ws.onmessage = (m)=>{
+    if(typeof m.data !== 'string'){ pushPcm(new Uint8Array(m.data)); return; }
+    const e = JSON.parse(m.data);
+    handle(e);
+  };
+};
+
+function pushPcm(bytes){ pcm.push(bytes); pcmBytes += bytes.length; updAudio(); }
+function updAudio(){
+  const ms = Math.round(pcmBytes/2/24000*1000);
+  $('audiometa').textContent = pcmBytes ? (pcmBytes+' B · '+ms+' ms @24 kHz') : 'empty';
+  $('btnPlay').disabled = !pcmBytes; $('btnClearAudio').disabled = !pcmBytes;
+}
+
+let partial = '';
+function handle(e){
+  const skip = e.event==='assistant.audio.chunk';
+  if(!skip) log(e.event+'  '+JSON.stringify(e).slice(0,180), cls(e.event));
+
+  switch(e.event){
+    case 'assistant.audio.chunk':
+      if(e.audio){ const b=atob(e.audio); const u=new Uint8Array(b.length);
+        for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i); pushPcm(u);
+        queueChunk(u); }                            // plays as it streams in
+      break;
+    case 'assistant.text.delta': partial += e.text||''; break;
+    case 'assistant.response.completed':
+      bubble('tutor', e.text || partial || '(audio only)'); partial=''; break;
+    case 'input.transcript': if(e.final) bubble('you', e.text); break;
+    case 'assistant.interrupted':
+      stopAudio();                                   // §23: stop playback FIRST
+      log('⏹ playback stopped locally (stop_playback='+e.stop_playback+')','e-err');
+      break;
+    case 'session.recap': bubble('tutor','↩ recap of previous session: '+
+      (e.concepts_covered||[]).join(', ')); break;
+    case 'visual.updated': bubble('tutor','📊 visual ['+e.visual.type+'] '+e.visual.content); break;
+    case 'provider.switched':
+      log('🔁 FAILOVER '+e.from+' → '+e.to+' (continuity preserved)','e-provider'); break;
+  }
+  if(e.event.startsWith('provider')||e.event.startsWith('checkpoint')||
+     e.event.startsWith('resume')||e.event.startsWith('question')||
+     e.event.startsWith('session')||e.event==='latency'||e.event==='language.changed')
+    refresh();
+}
+
+const send = (o)=>{ if(ws&&ws.readyState===1) ws.send(JSON.stringify(o)); };
+$('btnStart').onclick  = ()=>send({type:'start'});
+$('btnInt').onclick    = ()=>{ stopAudio(); send({type:'interrupt'}); };
+$('btnResume').onclick = ()=>send({type:'resume'});
+$('btnPause').onclick  = ()=>send({type:'pause'});
+$('btnLang').onclick   = ()=>send({type:'language', language:$('lang2').value});
+$('btnLevel').onclick  = async () => {
+  const r = await jreq('POST','/voice/session/'+sid+'/level',{level:$('lvl2').value});
+  if(r) log('level → '+r.detail+' (the checkpoint is untouched)','e-sess');
+};
+$('btnEnd').onclick    = ()=>{ send({type:'end'}); setTimeout(()=>ws&&ws.close(),400); };
+$('btnAsk').onclick    = ()=>{ const t=$('q').value.trim(); if(!t)return;
+                               bubble('you',t); send({type:'question',text:t}); $('q').value=''; };
+$('q').addEventListener('keydown', e=>{ if(e.key==='Enter') $('btnAsk').click(); });
+
+// a 0.5 s PCM16 @16 kHz tone, so you can watch the audio-in path light up
+$('btnMic').onclick = ()=>{
+  const n=8000, buf=new Int16Array(n);
+  for(let i=0;i<n;i++) buf[i]=Math.sin(i*0.05)*6000;
+  if(ws&&ws.readyState===1){ ws.send(buf.buffer); log('sent 16000 B of PCM16 @16 kHz','e-dim'); }
+};
+
+// ---------------------------------------------------------------- playback
+function stopAudio(){
+  live.forEach(n=>{ try{n.stop()}catch(e){} });
+  live = []; nextAt = 0; src = null;
+}
+function actx(){
+  ctx = ctx || new (window.AudioContext||window.webkitAudioContext)();
+  if(ctx.state==='suspended') ctx.resume();
+  return ctx;
+}
+/* Schedule a chunk right after the previously scheduled one, so playback
+   starts on the first chunk instead of waiting for the whole turn. */
+function queueChunk(u){
+  const a = actx();
+  const n = u.length>>1, dst = a.sampleRate, ratio = 24000/dst;
+  const buf = a.createBuffer(1, Math.max(1, Math.round(n/ratio)), dst);
+  const ch = buf.getChannelData(0);
+  const dv = new DataView(u.buffer, u.byteOffset, u.byteLength);
+  for(let i=0;i<ch.length;i++){
+    const pos = i*ratio, i0 = Math.floor(pos), i1 = Math.min(n-1,i0+1), f = pos-i0;
+    ch[i] = ((dv.getInt16(i0*2,true)*(1-f)) + (dv.getInt16(i1*2,true)*f)) / 32768;
+  }
+  const node = a.createBufferSource(); node.buffer = buf; node.connect(a.destination);
+  const at = Math.max(a.currentTime + 0.04, nextAt);
+  node.start(at); nextAt = at + buf.duration; live.push(node);
+  node.onended = ()=>{ const i=live.indexOf(node); if(i>=0) live.splice(i,1); };
+}
+$('btnPlay').onclick = ()=>{
+  if(!pcm.length) return;
+  const a = actx();
+  const total = pcmBytes/2, buf = a.createBuffer(1,total,24000), ch = buf.getChannelData(0);
+  let o=0;
+  for(const part of pcm){
+    const dv = new DataView(part.buffer, part.byteOffset, part.byteLength);
+    for(let i=0;i+1<part.byteLength;i+=2) ch[o++] = dv.getInt16(i,true)/32768;
+  }
+  stopAudio(); src = a.createBufferSource(); src.buffer=buf;
+  src.connect(a.destination); src.start();
+};
+$('btnTest').onclick = ()=>{
+  const a = actx();
+  [880, 1175].forEach((f,k)=>{
+    const n = Math.round(a.sampleRate*0.16), b = a.createBuffer(1,n,a.sampleRate);
+    const ch = b.getChannelData(0);
+    for(let i=0;i<n;i++) ch[i] = Math.sin(2*Math.PI*f*i/a.sampleRate) * 0.25
+                                 * Math.min(1,(n-i)/(a.sampleRate*0.04));
+    const s = a.createBufferSource(); s.buffer = b;
+    s.connect(a.destination); s.start(a.currentTime + k*0.18);
+  });
+  log('🔔 test tone — if you cannot hear this, the browser is blocking audio','e-dim');
+};
+$('btnClearAudio').onclick = ()=>{ pcm=[]; pcmBytes=0; updAudio(); };
+
+// ---------------------------------------------------------------- state
+async function refresh(){
+  if(!sid) return;
+  const s = await jreq('GET','/voice/session/'+sid+'/state'); if(!s) return;
+  const d = s.diagnostics||{};
+  $('d-pipe').textContent  = d.active_provider || (s.active_pipeline&&s.active_pipeline.signature) || '—';
+  $('d-state').textContent = s.state;
+  $('d-lang').textContent  = s.language;
+  $('d-reason').textContent= d.fallback_reason || 'none';
+  $('d-retry').textContent = (d.retry_count||0)+' / '+(d.failover_count||0);
+  $('d-cycles').textContent= (s.interrupt_count||0)+' / '+(s.resume_count||0);
+  const lat = d.latency||{}; const k = Object.keys(lat);
+  $('d-lat').textContent   = k.length ? k.map(x=>x+'='+Math.round(lat[x])+'ms').join(' ') : '—';
+  $('d-cp').textContent    = s.checkpoint ? (s.checkpoint.section||s.checkpoint.topic) : 'none';
+  $('d-con').innerHTML     = (s.concepts_covered||[]).map(c=>'<span class="pill">'+c+'</span>').join('') || '—';
+}
+$('btnState').onclick = refresh;
+$('btnProv').onclick = async ()=>{
+  const p = await jreq('GET','/health/providers'); if(!p) return;
+  log('provider health: mode='+p.mode+' configured='+JSON.stringify(p.configured_providers),'e-provider');
+  Object.entries(p.routing.health||{}).forEach(([k,v])=>log('  '+k+': '+JSON.stringify(v),'e-provider'));
+};
+$('btnLangs').onclick = async ()=>{
+  const l = await jreq('GET','/voice/languages'); if(!l) return;
+  l.languages.forEach(x=>log((x.realtime_native?'🟢 ':'🟡 ')+x.code+'  '+
+    x.primary_pipeline.signature, 'e-learn'));
+};
+
+(async ()=>{
+  const h = await jreq('GET','/health');
+  $('svc').textContent = h ? (h.service+' · '+h.status) : 'unreachable';
+  const p = await jreq('GET','/health/providers');
+  if(p) $('modepill').textContent = 'mode: '+p.mode+' · '+p.configured_providers.join(', ');
+  log('console ready — create a session to begin');
+})();
+</script>
+</body>
+</html>

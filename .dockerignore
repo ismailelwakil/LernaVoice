@@ -1,0 +1,23 @@
+# Never ship secrets or local state into the image.
+.env
+.env.*
+!.env.example
+.secrets/
+.streamlit/secrets.toml
+
+# Local/dev clutter
+.git/
+.gitignore
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+demo-audio/
+tests/
+docs/
+*.zip
+*.log
+run.ps1
